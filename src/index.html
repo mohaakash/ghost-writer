@@ -4,8 +4,6 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Ghost Writer</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
-    <script src="appearance.js"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;display=swap"
       rel="stylesheet"
@@ -14,38 +12,6 @@
       href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined"
       rel="stylesheet"
     />
-    <script>
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              primary: "#007AFF",
-              "background-light": "#F2F2F7",
-              "background-dark": "#000000",
-              "glass-light": "rgba(255, 255, 255, 0.7)",
-              "glass-dark": "rgba(28, 28, 30, 0.8)",
-            },
-            fontFamily: {
-              display: [
-                "Inter",
-                "-apple-system",
-                "BlinkMacSystemFont",
-                "Segoe UI",
-                "Roboto",
-                "Helvetica",
-                "Arial",
-                "sans-serif",
-              ],
-            },
-            borderRadius: {
-              DEFAULT: "12px",
-              ios: "20px",
-            },
-          },
-        },
-      };
-    </script>
     <style>
       body {
         font-family: "Inter", sans-serif;
@@ -1063,10 +1029,18 @@
       };
 
       function t(key) {
+        const translated = globalThis.GhostWriterServices?.presentation.translate(
+          key,
+          currentLang,
+          translations,
+        );
+        if (translated) return translated;
         return translations[currentLang][key] || translations["en"][key] || key;
       }
 
       function normalizeClipboardSettings(value) {
+        const extracted = globalThis.GhostWriterServices?.clipboard.normalizeSettings;
+        if (extracted) return extracted(value);
         const incoming = value && typeof value === "object" ? value : {};
         const allowedLimits = [25, 50, 100, 200];
         const maxItems = Number(incoming.maxItems);
@@ -1096,7 +1070,13 @@
       }
 
       function trimClipboardHistory(history) {
-        history.sort((a, b) => Number(b.pinned) - Number(a.pinned) || Number(b.createdAt) - Number(a.createdAt));
+        const extracted = globalThis.GhostWriterServices?.clipboard.trim;
+        if (extracted) {
+          const trimmed = extracted(history, clipboardSettings.maxItems);
+          history.splice(0, history.length, ...trimmed);
+          return;
+        }
+        history.sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || Number(b.createdAt) - Number(a.createdAt));
         while (history.length > clipboardSettings.maxItems) {
           const removableIndex = history.findLastIndex((item) => !item.pinned);
           if (removableIndex < 0) break;
@@ -1817,7 +1797,8 @@
           if (e.altKey) modifiers.push("Alt");
           if (e.metaKey) modifiers.push("Command");
 
-          const key = e.key === " " ? "Space" : e.key.toUpperCase();
+          const formatShortcutKey = globalThis.GhostWriterServices?.presentation.formatShortcutKey;
+          const key = formatShortcutKey ? formatShortcutKey(e.key) : (e.key === " " ? "Space" : e.key.toUpperCase());
           if (["CONTROL", "SHIFT", "ALT", "META"].includes(key)) return;
 
           const finalShortcut = [...modifiers, key].join("+");
@@ -2006,6 +1987,8 @@ Never invent facts, examples, steps, relationships, labels, or conclusions. Do n
       }
 
       function getGeneratedImageDataUrl() {
+        const extracted = globalThis.GhostWriterServices?.presentation.generatedImageDataUrl;
+        if (extracted) return extracted(currentGeneratedBase64);
         if (!currentGeneratedBase64) return "";
         if (currentGeneratedBase64.startsWith("data:image/")) {
           return currentGeneratedBase64;
@@ -2038,6 +2021,8 @@ Never invent facts, examples, steps, relationships, labels, or conclusions. Do n
       }
 
       function createDefaultAiSettings() {
+        const extracted = globalThis.GhostWriterServices?.ai.defaults;
+        if (extracted) return JSON.parse(JSON.stringify(extracted));
         return {
           version: 2,
           selectedProvider: "openai",
@@ -2068,6 +2053,8 @@ Never invent facts, examples, steps, relationships, labels, or conclusions. Do n
       }
 
       function normalizeAiSettings(value) {
+        const extracted = globalThis.GhostWriterServices?.ai.normalizeSettings;
+        if (extracted) return extracted(value);
         const defaults = createDefaultAiSettings();
         const incoming = value && typeof value === "object" ? value : {};
         const providerConfig = {
@@ -2205,6 +2192,8 @@ Never invent facts, examples, steps, relationships, labels, or conclusions. Do n
       }
 
       function maskApiKey(key) {
+        const extracted = globalThis.GhostWriterServices?.ai.maskApiKey;
+        if (extracted) return extracted(key);
         if (!key) return "";
         if (key.length <= 8) return "•".repeat(key.length);
         return `${key.slice(0, 4)}${"•".repeat(8)}${key.slice(-4)}`;
@@ -2222,6 +2211,8 @@ Never invent facts, examples, steps, relationships, labels, or conclusions. Do n
       }
 
       function providerNeedsKey(id) {
+        const extracted = globalThis.GhostWriterServices?.ai.providerNeedsKey;
+        if (extracted) return extracted(id);
         if (id === "openai-compatible") return false;
         return providerById(id)?.type !== "local";
       }
@@ -3044,5 +3035,6 @@ Never invent facts, examples, steps, relationships, labels, or conclusions. Do n
       const LEGACY_NP_STORAGE_KEY = "luminus_notepad_notes";
     </script>
 
+    <script type="module" src="./main.tsx"></script>
   </body>
 </html>

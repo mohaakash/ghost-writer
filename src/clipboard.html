@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Ghost Writer Clipboard</title>
-    <script src="appearance.js"></script>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;display=swap"
       rel="stylesheet"
@@ -487,6 +486,12 @@
       function loadItems() {
         try {
           const stored = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+          const extracted = globalThis.GhostWriterServices?.clipboard.normalizeHistory;
+          if (extracted) {
+            items = extracted(stored, makeId);
+            sortItems();
+            return;
+          }
           items = Array.isArray(stored)
             ? stored.filter((item) => item && typeof item.text === "string").map((item) => ({
                 id: String(item.id || makeId()),
@@ -502,10 +507,20 @@
       }
 
       function sortItems() {
-        items.sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.createdAt - a.createdAt);
+        const extracted = globalThis.GhostWriterServices?.clipboard.sort;
+        if (extracted) {
+          items.splice(0, items.length, ...extracted(items));
+          return;
+        }
+        items.sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || b.createdAt - a.createdAt);
       }
 
       function trimItems() {
+        const extracted = globalThis.GhostWriterServices?.clipboard.trim;
+        if (extracted) {
+          items.splice(0, items.length, ...extracted(items, clipboardSettings.maxItems));
+          return;
+        }
         sortItems();
         while (items.length > clipboardSettings.maxItems) {
           const removableIndex = items.findLastIndex((item) => !item.pinned);
@@ -528,6 +543,8 @@
       }
 
       function formatTime(timestamp) {
+        const extracted = globalThis.GhostWriterServices?.presentation.formatTime;
+        if (extracted) return extracted(timestamp);
         const date = new Date(timestamp);
         const today = new Date();
         if (date.toDateString() === today.toDateString()) {
@@ -537,10 +554,14 @@
       }
 
       function formatLength(text) {
+        const extracted = globalThis.GhostWriterServices?.presentation.formatLength;
+        if (extracted) return extracted(text);
         return `${text.length.toLocaleString()} ${text.length === 1 ? "character" : "characters"}`;
       }
 
       function historyGroupLabel(timestamp) {
+        const extracted = globalThis.GhostWriterServices?.presentation.historyGroupLabel;
+        if (extracted) return extracted(timestamp);
         const date = new Date(timestamp);
         const today = new Date();
         const startToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -817,5 +838,6 @@
         if (!document.hidden) { loadItems(); render(); }
       });
     </script>
+    <script type="module" src="./main.tsx"></script>
   </body>
 </html>

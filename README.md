@@ -19,7 +19,8 @@
     <a href="https://v2.tauri.app/"><img src="https://img.shields.io/badge/Tauri-2.0-FFC131?style=flat&logo=tauri&logoColor=white" height="20"/></a>&nbsp;
     <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/Rust-2021-FF6F00?style=flat&logo=rust" height="20"/></a>&nbsp;
     <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Tailwind-CSS-06B6D4?style=flat&logo=tailwindcss" height="20"/></a>&nbsp;
-    <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript"><img src="https://img.shields.io/badge/Vanilla-JS-F7DF1E?style=flat&logo=javascript" height="20"/></a>
+    <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-TypeScript-61DAFB?style=flat&logo=react&logoColor=111" height="20"/></a>&nbsp;
+    <a href="https://vite.dev/"><img src="https://img.shields.io/badge/Vite-8-646CFF?style=flat&logo=vite&logoColor=white" height="20"/></a>
   </p>
 
   <br/>
@@ -85,7 +86,7 @@
 
 | Dependency | Version | Installation |
 |-----------|---------|-------------|
-| **Node.js** | ≥ 18 | [nodejs.org](https://nodejs.org/) |
+| **Node.js** | ≥ 20.19 | [nodejs.org](https://nodejs.org/) |
 | **Rust & Cargo** | latest | [rustup.rs](https://rustup.rs/) |
 | **Tauri CLI** | 2.x | `npm install -g @tauri-apps/cli` |
 
@@ -106,13 +107,13 @@ cd ai-editor
 npm install
 
 # Run in development mode
-npm run tauri dev
+npm run tauri:dev
 ```
 
 ### Build for Production
 
 ```bash
-npm run tauri build
+npm run tauri:build
 ```
 
 The bundled binaries will be available in `src-tauri/target/release/bundle/`.
@@ -182,9 +183,9 @@ Open **Preferences → General → Window effects** to adjust these. Setting cha
 |-------|-----------|
 | **Desktop Shell** | [Tauri 2.0](https://v2.tauri.app/) |
 | **Backend** | [Rust](https://www.rust-lang.org/) |
-| **Frontend** | HTML5 + Vanilla JavaScript |
-| **Styling** | [Tailwind CSS](https://tailwindcss.com/) + Custom CSS |
-| **Icons** | [Material Icons](https://fonts.google.com/icons) |
+| **Frontend** | [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) + [Vite](https://vite.dev/) |
+| **Styling** | [Tailwind CSS](https://tailwindcss.com/) compiled locally with PostCSS |
+| **Icons** | [Lucide](https://lucide.dev/) for React primitives; existing Material Icons retained for pixel-compatible pages |
 | **AI Requests** | Direct HTTP from Rust bridge |
 | **Input Simulation** | [Enigo](https://github.com/enigo-rs/enigo) |
 | **Clipboard** | Tauri clipboard plugin |
@@ -198,12 +199,18 @@ Open **Preferences → General → Window effects** to adjust these. Setting cha
 ```
 ai-editor/
 ├── src/                    # Frontend source
-│   ├── index.html          # Main app window
-│   ├── notepad.html        # Standalone tabbed notepad
-│   ├── clipboard.html      # Standalone clipboard window
-│   ├── appearance.js       # Shared appearance system (theme, acrylic, blur, transparency)
-│   ├── styles.css          # Legacy template styles (unused)
-│   └── main.js             # Legacy entry stub (unused)
+│   ├── index.html           # Existing main-window UI and behavior
+│   ├── notepad.html         # Existing notepad UI and behavior
+│   ├── clipboard.html       # Existing clipboard UI and behavior
+│   ├── main.tsx             # Shared React runtime and compiled styles
+│   ├── App.tsx              # Typed React surface for incremental migration
+│   ├── notepad.tsx          # Typed notepad entry for incremental migration
+│   ├── clipboard.tsx        # Typed clipboard entry for incremental migration
+│   ├── appearance.js        # Shared theme/acrylic behavior
+│   ├── lib/                 # Tauri bridge, appearance and storage helpers
+│   └── styles.css           # Tailwind layers and compatibility base styles
+├── vite.config.ts           # Multi-page Vite build (outputs dist/)
+├── tailwind.config.js       # Tailwind theme and content paths
 ├── DESIGN_LANGUAGE.md      # Visual design system reference
 ├── src-tauri/              # Rust backend
 │   ├── src/
@@ -214,6 +221,13 @@ ai-editor/
 ├── tests/                  # E2E tests
 └── package.json            # Node dependencies
 ```
+
+Vite uses the existing pages under `src/` as its multi-page inputs and writes
+the packaged frontend to `dist/`. This keeps the current glass UI, DOM wiring,
+and interaction behavior intact while React and TypeScript are introduced
+incrementally. The Rust backend and Tauri window configuration remain the
+runtime authority for shortcuts, AI calls, clipboard access, storage, and
+window lifecycle.
 
 ---
 

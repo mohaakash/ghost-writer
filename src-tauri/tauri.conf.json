@@ -4,7 +4,10 @@
   "version": "0.1.0",
   "identifier": "com.akash.ghostwriter",
   "build": {
-    "frontendDist": "../src"
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "corepack npm run dev -- --host 127.0.0.1 --port 1420",
+    "beforeBuildCommand": "corepack npm run build"
   },
   "app": {
     "withGlobalTauri": true,
