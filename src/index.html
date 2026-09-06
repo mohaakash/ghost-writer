@@ -1,0 +1,3048 @@
+<!doctype html>
+<html class="dark" lang="en" id="html-root">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Ghost Writer</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script src="appearance.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#007AFF",
+              "background-light": "#F2F2F7",
+              "background-dark": "#000000",
+              "glass-light": "rgba(255, 255, 255, 0.7)",
+              "glass-dark": "rgba(28, 28, 30, 0.8)",
+            },
+            fontFamily: {
+              display: [
+                "Inter",
+                "-apple-system",
+                "BlinkMacSystemFont",
+                "Segoe UI",
+                "Roboto",
+                "Helvetica",
+                "Arial",
+                "sans-serif",
+              ],
+            },
+            borderRadius: {
+              DEFAULT: "12px",
+              ios: "20px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        -webkit-font-smoothing: antialiased;
+        overflow: hidden;
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        width: 100vw;
+        background: transparent;
+      }
+
+      .ios-shadow {
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+      }
+
+      .ai-gradient-icon {
+        background: linear-gradient(135deg, #7dd3fc, #c084fc, #f472b6);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      /* Custom Scrollbar Styles */
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: rgba(128, 128, 128, 0.3);
+        border-radius: 10px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(128, 128, 128, 0.5);
+      }
+
+      /* Ensure smooth view switching */
+      .view-container {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+
+
+      /* Toast Animation */
+      @keyframes slideIn {
+        from {
+          transform: translateY(100%);
+          opacity: 0;
+        }
+
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes fadeOut {
+        from {
+          opacity: 1;
+        }
+
+        to {
+          opacity: 0;
+        }
+      }
+
+      .toast-animate-in {
+        animation: slideIn 0.3s ease-out forwards;
+      }
+
+      .toast-animate-out {
+        animation: fadeOut 0.3s ease-in forwards;
+      }
+
+      /* Bottom Sheet Styles */
+      .bottom-sheet-overlay {
+        background-color: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(4px);
+        transition: opacity 0.3s ease;
+      }
+
+      .bottom-sheet {
+        transform: translateY(100%);
+        transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+        border-top-left-radius: 32px;
+        border-top-right-radius: 32px;
+      }
+
+      .bottom-sheet.show {
+        transform: translateY(0);
+      }
+    </style>
+  </head>
+
+  <body class="bg-transparent">
+    <div id="current-text" style="display: none"></div>
+
+    <!-- Main Container - Now filling the entire window -->
+    <div
+      id="floating-menu"
+      data-tauri-drag-region
+      class="w-full h-full flex flex-col glass-effect app-shell ios-shadow border border-white/20 dark:border-white/10 overflow-hidden relative"
+    >
+      <!-- Header/Drag Area -->
+      <div class="h-1 flexible-drag-region w-full" data-tauri-drag-region></div>
+
+      <div class="flex-1 overflow-y-auto px-3 pb-16">
+        <!-- Captured Text Indicator -->
+        <div
+          id="captured-indicator"
+          class="hidden mb-3 px-3 py-2 bg-green-500/10 dark:bg-green-400/10 rounded-xl border border-green-500/20"
+        >
+          <p
+            class="text-[11px] text-green-600 dark:text-green-400 font-medium truncate flex items-center gap-2"
+          >
+            <span class="material-icons-outlined text-[14px]"
+              >content_paste</span
+            >
+            <span data-i18n="text_captured" id="captured-preview"
+              >Text captured</span
+            >
+          </p>
+        </div>
+
+        <!-- Menu View -->
+        <div id="menu-view" class="view-container">
+          <button onclick="useCopiedText()" class="text-xs text-primary mb-2">Use copied text</button>
+          <div
+            class="mb-3 bg-white/40 dark:bg-zinc-800/40 rounded-xl p-3 flex items-center gap-3 border border-white/20 dark:border-zinc-700/30 group-focus-within:border-primary/50 transition-all"
+          >
+            <span class="material-icons-outlined ai-gradient-icon text-xl"
+              >auto_awesome</span
+            >
+            <input
+              id="prompt-input"
+              class="bg-transparent border-none focus:ring-0 p-0 text-[15px] placeholder-zinc-500 dark:text-white flex-1"
+              data-i18n-placeholder="describe_change"
+              placeholder="Describe your change..."
+              type="text"
+            />
+          </div>
+
+          <div class="px-1 mb-2">
+            <p
+              data-i18n="quick_actions"
+              class="text-[10px] font-bold text-zinc-500 dark:text-zinc-500/80 tracking-widest uppercase"
+            >
+              Quick Actions
+            </p>
+          </div>
+          <div class="space-y-1">
+            <button
+              onclick="handleAI('Improve the writing while preserving the original meaning, facts, and voice.')"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/30 dark:hover:bg-white/5 transition-all group"
+            >
+              <span class="material-icons-outlined text-[20px] ai-gradient-icon"
+                >auto_awesome</span
+              >
+              <span
+                data-i18n="improve_writing"
+                class="text-[15px] text-zinc-800 dark:text-zinc-200 font-medium"
+                >Improve writing</span
+              >
+            </button>
+            <!-- <button
+              onclick="handleAI('Fix all grammar and spelling errors')"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/30 dark:hover:bg-white/5 transition-all"
+            >
+              <span
+                class="material-icons-outlined text-[20px] text-zinc-500 dark:text-zinc-400"
+                >check_circle</span
+              >
+              <span class="text-[15px] text-zinc-800 dark:text-zinc-200"
+                >Fix Grammar</span
+              >
+            </button> -->
+            <button
+              onclick="handleAI('Check grammar and spelling in this text.')"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/30 dark:hover:bg-white/5 transition-all"
+            >
+              <span
+                class="material-icons-outlined text-[20px] text-zinc-500 dark:text-zinc-400"
+                >spellcheck</span
+              >
+              <span
+                data-i18n="fix_grammar"
+                class="text-[15px] text-zinc-800 dark:text-zinc-200"
+                >Fix grammar</span
+              >
+            </button>
+            <button
+              onclick="handleAI('Summarize this text as concise bullet points. Include only ideas explicitly present in the text. Do not add facts, opinions, or explanations.')"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/30 dark:hover:bg-white/5 transition-all"
+            >
+              <span
+                class="material-icons-outlined text-[20px] text-zinc-500 dark:text-zinc-400"
+                >summarize</span
+              >
+              <span
+                data-i18n="summarize"
+                class="text-[15px] text-zinc-800 dark:text-zinc-200"
+                >Summarize text</span
+              >
+            </button>
+            <button
+              onclick="handleAI('Rewrite this text for clarity and structure. Preserve the original meaning and all important details. Return only the rewritten text.')"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/30 dark:hover:bg-white/5 transition-all"
+            >
+              <span
+                class="material-icons-outlined text-[20px] text-zinc-500 dark:text-zinc-400"
+                >fact_check</span
+              >
+              <span
+                data-i18n="rewrite_clearly"
+                class="text-[15px] text-zinc-800 dark:text-zinc-200"
+                >Rewrite for clarity</span
+              >
+            </button>
+            <!-- Image Generation Buttons -->
+            <button
+              id="generate-image-btn"
+              onclick="handleGenerateImage('image')"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/30 dark:hover:bg-white/5 transition-all"
+            >
+              <span class="material-icons-outlined text-[20px] text-pink-400">image</span>
+              <span class="text-[15px] text-zinc-800 dark:text-zinc-200 font-medium">Generate Image</span>
+            </button>
+            <button
+              id="generate-diagram-btn"
+              onclick="handleGenerateImage('diagram')"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/30 dark:hover:bg-white/5 transition-all"
+            >
+              <span class="material-icons-outlined text-[20px] text-violet-400">account_tree</span>
+              <span class="text-[15px] text-zinc-800 dark:text-zinc-200 font-medium">Generate Diagram</span>
+            </button>
+            <button
+              id="open-notepad-btn"
+              onclick="openNotepadWindow()"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/30 dark:hover:bg-white/5 transition-all"
+            >
+              <span class="material-icons-outlined text-[20px] text-amber-400">edit_note</span>
+              <span class="text-[15px] text-zinc-800 dark:text-zinc-200 font-medium">Notepad</span>
+            </button>
+            <button
+              id="open-clipboard-btn"
+              onclick="openClipboardWindow()"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/30 dark:hover:bg-white/5 transition-all"
+            >
+              <span class="material-icons-outlined text-[20px] text-sky-400">content_paste</span>
+              <span class="text-[15px] text-zinc-800 dark:text-zinc-200 font-medium">Clipboard</span>
+            </button>
+
+          </div>
+        </div>
+
+        <!-- Settings View -->
+        <div
+          id="settings-view"
+          class="hidden fixed inset-0 z-50 bg-black/30 p-2 backdrop-blur-[2px] dark:bg-black/60"
+          onclick="if (event.target === this) showView('menu')"
+        >
+          <div class="flex h-full w-full flex-col overflow-hidden rounded-[22px] bg-white/90 shadow-2xl dark:bg-zinc-950/95">
+            <header data-tauri-drag-region class="shrink-0 border-b border-black/5 dark:border-white/10">
+              <div class="flex h-11 items-center justify-between gap-2 px-3">
+                <div class="flex min-w-0 items-center gap-2">
+                  <span class="material-icons-outlined text-[18px] text-primary">tune</span>
+                  <h2
+                    data-i18n="preferences"
+                    class="truncate text-sm font-bold uppercase tracking-widest text-zinc-800 dark:text-zinc-200"
+                  >
+                    Preferences
+                  </h2>
+                </div>
+                <button
+                  onclick="showView('menu')"
+                  aria-label="Close preferences"
+                  title="Close preferences"
+                  class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-zinc-500 transition-all hover:bg-black/5 hover:text-zinc-800 dark:hover:bg-white/10 dark:hover:text-zinc-200"
+                >
+                  <span class="material-icons-outlined text-[18px]">close</span>
+                </button>
+              </div>
+              <div class="px-2 pb-2">
+                <div role="tablist" aria-label="Preference sections" class="flex rounded-xl bg-black/5 p-1 dark:bg-white/5">
+                  <button
+                    id="settings-tab-models"
+                    data-settings-tab="models"
+                    role="tab"
+                    aria-selected="true"
+                    onclick="selectSettingsTab('models')"
+                    class="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white/80 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-primary shadow-sm transition-all dark:bg-zinc-800 dark:text-primary"
+                  >
+                    <span class="material-icons-outlined text-[15px]">smart_toy</span>
+                    <span data-i18n="models">Models</span>
+                  </button>
+                  <button
+                    id="settings-tab-general"
+                    data-settings-tab="general"
+                    role="tab"
+                    aria-selected="false"
+                    onclick="selectSettingsTab('general')"
+                    class="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-zinc-500 transition-all hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                  >
+                    <span class="material-icons-outlined text-[15px]">settings</span>
+                    <span data-i18n="general">General</span>
+                  </button>
+                  <button
+                    id="settings-tab-clipboard"
+                    data-settings-tab="clipboard"
+                    role="tab"
+                    aria-selected="false"
+                    onclick="selectSettingsTab('clipboard')"
+                    class="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-zinc-500 transition-all hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+                  >
+                    <span class="material-icons-outlined text-[15px]">content_paste</span>
+                    <span data-i18n="clipboard">Clipboard</span>
+                  </button>
+                </div>
+              </div>
+            </header>
+
+            <div class="flex-1 overflow-y-auto px-3 pb-5">
+              <section id="settings-models-panel" class="space-y-5 pt-2">
+            <div id="model-settings-root" class="space-y-5">
+              <div class="py-8 text-center text-xs text-zinc-500">Loading models…</div>
+            </div>
+              </section>
+
+              <section id="settings-general-panel" class="hidden space-y-5 px-1 pt-2 pb-4">
+            <div class="space-y-2 mt-2">
+              <label
+                data-i18n="global_shortcut"
+                class="text-[11px] font-bold text-zinc-500 dark:text-white uppercase tracking-wider ml-1"
+                >Global Shortcut</label
+              >
+              <button
+                id="shortcut-recorder"
+                onclick="startRecordingShortcut()"
+                class="w-full flex items-center justify-between bg-black/5 dark:bg-white/5 border border-transparent hover:border-primary/20 rounded-xl px-4 py-3 text-sm transition-all group"
+              >
+                <div class="flex items-center gap-3">
+                  <span
+                    class="material-icons-outlined text-[20px] text-zinc-400 group-hover:text-primary"
+                    >keyboard</span
+                  >
+                  <span
+                    id="shortcut-display"
+                    class="font-bold text-zinc-800 dark:text-zinc-200"
+                    >Ctrl+Shift+U</span
+                  >
+                </div>
+                <span
+                  class="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase font-bold"
+                  >Edit</span
+                >
+              </button>
+            </div>
+
+            <div class="space-y-2">
+              <label
+                data-i18n="appearance"
+                class="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider ml-1"
+                >Appearance</label
+              >
+              <button
+                class="w-full flex items-center justify-between bg-black/5 dark:bg-white/5 border border-transparent hover:border-primary/20 rounded-xl px-4 py-3 text-sm transition-all group"
+                onclick="toggleTheme()"
+              >
+                <div class="flex items-center gap-3">
+                  <span
+                    class="material-icons-outlined text-[20px] text-zinc-500 dark:text-zinc-400 group-hover:text-primary"
+                    >dark_mode</span
+                  >
+                  <span
+                    data-i18n="interface_theme"
+                    class="font-medium text-zinc-800 dark:text-zinc-200"
+                    >Interface Theme</span
+                  >
+                </div>
+                <span
+                  id="theme-label"
+                  class="text-[10px] bg-zinc-500/10 text-zinc-500 px-2 py-0.5 rounded-full uppercase font-bold tracking-tight"
+                  >System</span
+                >
+              </button>
+
+              <!-- Language Settings -->
+              <button
+                onclick="
+                  document.getElementById('language-select').showPicker
+                    ? document.getElementById('language-select').showPicker()
+                    : document.getElementById('language-select').focus()
+                "
+                class="w-full flex items-center justify-between bg-black/5 dark:bg-white/5 border border-transparent hover:border-primary/20 rounded-xl px-4 py-3 text-sm transition-all group"
+              >
+                <div class="flex items-center gap-3">
+                  <span
+                    class="material-icons-outlined text-[20px] text-zinc-500 dark:text-zinc-400 group-hover:text-primary"
+                    >language</span
+                  >
+                  <span
+                    data-i18n="language"
+                    class="font-medium text-zinc-800 dark:text-zinc-200"
+                    >Language</span
+                  >
+                </div>
+                <select
+                  id="language-select"
+                  onchange="changeLanguage(this.value)"
+                  onclick="event.stopPropagation()"
+                  class="bg-transparent border-none focus:ring-0 text-[10px] uppercase font-bold text-zinc-500 cursor-pointer p-0 text-right"
+                >
+                  <option value="en">English</option>
+                  <option value="fr">Français</option>
+                  <option value="ar">العربية</option>
+                </select>
+              </button>
+            </div>
+
+            <!-- Window Effects -->
+            <div class="rounded-2xl border border-black/5 bg-black/5 p-3 dark:border-white/5 dark:bg-white/5">
+              <div class="mb-3 flex items-center gap-2">
+                <span class="material-icons-outlined text-[18px] text-primary">blur_on</span>
+                <span data-i18n="window_effects" class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Window effects</span>
+              </div>
+
+              <label class="flex items-center justify-between gap-3 rounded-xl bg-white/40 px-3 py-2.5 dark:bg-zinc-900/40">
+                <span class="min-w-0">
+                  <span data-i18n="acrylic_blur" class="block text-xs font-medium text-zinc-800 dark:text-zinc-200">Acrylic blur</span>
+                  <span data-i18n="acrylic_blur_help" class="mt-0.5 block text-[10px] leading-relaxed text-zinc-500">Frosted-glass backdrop across all windows.</span>
+                </span>
+                <input id="appearance-acrylic" type="checkbox" checked onchange="saveAppearanceSetting('acrylic', this.checked)" class="h-4 w-4 shrink-0 rounded border-zinc-300 text-primary focus:ring-primary/30 dark:border-zinc-700 dark:bg-zinc-900" />
+              </label>
+
+              <div class="mt-2 rounded-xl bg-white/40 px-3 py-2.5 dark:bg-zinc-900/40">
+                <div class="flex items-center justify-between gap-3">
+                  <span class="min-w-0">
+                    <span data-i18n="blur_amount" class="block text-xs font-medium text-zinc-800 dark:text-zinc-200">Blur amount</span>
+                    <span data-i18n="blur_amount_help" class="mt-0.5 block text-[10px] leading-relaxed text-zinc-500">Strength of the frosted-glass effect.</span>
+                  </span>
+                  <span id="appearance-blur-value" class="shrink-0 text-[11px] font-bold text-zinc-700 dark:text-zinc-300">20px</span>
+                </div>
+                <input id="appearance-blur" type="range" min="0" max="40" step="1" value="20" oninput="onAppearanceSlider('blur')" class="mt-2 w-full accent-primary" />
+              </div>
+
+              <div class="mt-2 rounded-xl bg-white/40 px-3 py-2.5 dark:bg-zinc-900/40">
+                <div class="flex items-center justify-between gap-3">
+                  <span class="min-w-0">
+                    <span data-i18n="transparency" class="block text-xs font-medium text-zinc-800 dark:text-zinc-200">Transparency</span>
+                    <span data-i18n="transparency_help" class="mt-0.5 block text-[10px] leading-relaxed text-zinc-500">Opacity of the window background.</span>
+                  </span>
+                  <span id="appearance-transparency-value" class="shrink-0 text-[11px] font-bold text-zinc-700 dark:text-zinc-300">95%</span>
+                </div>
+                <input id="appearance-transparency" type="range" min="0" max="100" step="1" value="95" oninput="onAppearanceSlider('transparency')" class="mt-2 w-full accent-primary" />
+              </div>
+            </div>
+              </section>
+
+              <section id="settings-clipboard-panel" class="hidden space-y-4 px-1 pt-2 pb-4">
+                <div class="px-1">
+                  <p data-i18n="clipboard" class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Clipboard</p>
+                  <p data-i18n="clipboard_help" class="mt-0.5 text-[10px] leading-relaxed text-zinc-500 dark:text-zinc-500/90">Manage your local clipboard history and capture behavior.</p>
+                </div>
+
+                <div class="rounded-2xl border border-black/5 bg-black/5 p-3 dark:border-white/5 dark:bg-white/5">
+                  <div class="mb-3 flex items-center gap-2">
+                    <span class="material-icons-outlined text-[18px] text-primary">content_paste</span>
+                    <span data-i18n="clipboard_behavior" class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Behavior</span>
+                  </div>
+
+                  <label class="flex items-center justify-between gap-3 rounded-xl bg-white/40 px-3 py-2.5 dark:bg-zinc-900/40">
+                    <span class="min-w-0">
+                      <span data-i18n="clipboard_auto_capture" class="block text-xs font-medium text-zinc-800 dark:text-zinc-200">Automatic capture</span>
+                      <span data-i18n="clipboard_auto_capture_help" class="mt-0.5 block text-[10px] leading-relaxed text-zinc-500">Capture new text copied anywhere while Ghost Writer is running.</span>
+                    </span>
+                    <input id="clipboard-auto-capture" type="checkbox" checked onchange="saveClipboardSetting('autoCapture', this.checked)" class="h-4 w-4 shrink-0 rounded border-zinc-300 text-primary focus:ring-primary/30 dark:border-zinc-700 dark:bg-zinc-900" />
+                  </label>
+
+                  <label class="mt-2 flex items-center justify-between gap-3 rounded-xl bg-white/40 px-3 py-2.5 dark:bg-zinc-900/40">
+                    <span class="min-w-0">
+                      <span data-i18n="clipboard_history_limit" class="block text-xs font-medium text-zinc-800 dark:text-zinc-200">History limit</span>
+                      <span data-i18n="clipboard_history_limit_help" class="mt-0.5 block text-[10px] leading-relaxed text-zinc-500">Older unpinned items are removed first.</span>
+                    </span>
+                    <select id="clipboard-history-limit" onchange="saveClipboardSetting('maxItems', Number(this.value))" class="rounded-lg border border-transparent bg-white/60 px-2 py-1 text-[11px] font-semibold text-zinc-700 outline-none focus:border-primary/30 dark:bg-zinc-900/60 dark:text-zinc-200">
+                      <option value="25">25</option>
+                      <option value="50">50</option>
+                      <option value="100">100</option>
+                      <option value="200">200</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="rounded-2xl border border-black/5 bg-black/5 p-3 dark:border-white/5 dark:bg-white/5">
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                      <p data-i18n="clipboard_open_mode" class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Open mode</p>
+                      <p data-i18n="clipboard_open_only" class="mt-1 text-xs font-medium text-zinc-800 dark:text-zinc-200">Open clipboard only</p>
+                      <p data-i18n="clipboard_open_only_help" class="mt-0.5 text-[10px] leading-relaxed text-zinc-500">Hide the main window and use Clipboard as a standalone tool.</p>
+                    </div>
+                    <button onclick="openClipboardOnly()" class="flex shrink-0 items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-white transition-all hover:bg-primary/90">
+                      <span class="material-icons-outlined text-[15px]">open_in_new</span>
+                      <span data-i18n="clipboard_open_only_action">Open only Clipboard</span>
+                    </button>
+                  </div>
+                  <div class="mt-3 border-t border-black/5 pt-3 dark:border-white/5">
+                    <div class="mb-2 flex items-center justify-between gap-3">
+                      <div class="min-w-0">
+                        <p data-i18n="clipboard_shortcut" class="text-xs font-medium text-zinc-800 dark:text-zinc-200">Clipboard shortcut</p>
+                        <p data-i18n="clipboard_shortcut_help" class="mt-0.5 text-[10px] leading-relaxed text-zinc-500">Open Clipboard without opening the main window.</p>
+                      </div>
+                    </div>
+                    <button
+                      id="clipboard-shortcut-recorder"
+                      onclick="startRecordingClipboardShortcut()"
+                      class="group flex w-full items-center justify-between rounded-xl bg-white/40 px-3 py-2.5 text-left transition-all hover:bg-white/60 dark:bg-zinc-900/40 dark:hover:bg-zinc-900/60"
+                    >
+                      <span class="flex items-center gap-2.5">
+                        <span class="material-icons-outlined text-[18px] text-zinc-400 group-hover:text-primary">keyboard</span>
+                        <span id="clipboard-shortcut-display" class="font-bold text-zinc-800 dark:text-zinc-200">Ctrl+Shift+V</span>
+                      </span>
+                      <span data-i18n="edit" class="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">Edit</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="rounded-2xl border border-black/5 bg-black/5 p-3 dark:border-white/5 dark:bg-white/5">
+                  <div class="flex items-center justify-between gap-3">
+                    <div>
+                      <p data-i18n="clipboard_actions" class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">History actions</p>
+                      <p id="clipboard-item-count" class="mt-1 text-[10px] text-zinc-500">0 items stored</p>
+                    </div>
+                    <button onclick="captureClipboardNow()" class="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-white transition-all hover:bg-primary/90">
+                      <span class="material-icons-outlined text-[15px]">sync</span>
+                      <span data-i18n="clipboard_capture_now">Capture now</span>
+                    </button>
+                  </div>
+                  <button onclick="clearClipboardHistory()" class="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/5 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-red-500 transition-all hover:bg-red-500/10">
+                    <span class="material-icons-outlined text-[15px]">delete_sweep</span>
+                    <span data-i18n="clipboard_clear_all">Clear all history</span>
+                  </button>
+                </div>
+
+                <p data-i18n="clipboard_local_note" class="px-1 text-[10px] leading-relaxed text-zinc-500">Clipboard history stays on this device and is never sent to an AI provider.</p>
+              </section>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading View -->
+        <div id="loading-view" class="hidden py-12 text-center animate-pulse">
+          <span
+            class="material-icons-outlined ai-gradient-icon text-5xl animate-spin mb-4"
+            >auto_awesome</span
+          >
+          <p
+            data-i18n="synthesizing"
+            class="text-sm font-medium text-zinc-500 dark:text-zinc-400"
+          >
+            Synthesizing with AI...
+          </p>
+        </div>
+
+        <!-- Result View -->
+        <div id="result-view" class="hidden view-container">
+          <div class="px-1 mb-2">
+            <p
+              data-i18n="proposed_change"
+              class="text-[10px] font-bold text-zinc-500 dark:text-zinc-500/80 tracking-widest uppercase"
+            >
+              Proposed Change
+            </p>
+          </div>
+          <div
+            id="result-text"
+            class="p-4 bg-white/40 dark:bg-zinc-800/40 rounded-2xl border border-white/20 dark:border-zinc-700/30 text-[14px] text-zinc-800 dark:text-zinc-100 leading-relaxed whitespace-pre-wrap shadow-inner overflow-hidden"
+          ></div>
+          <div id="standard-result-actions" class="grid grid-cols-2 gap-3 mt-4">
+            <button
+              onclick="rejectResult()"
+              class="flex items-center justify-center gap-2 py-3 bg-red-500/10 hover:bg-red-500/15 text-red-600 dark:text-red-400 rounded-xl transition-all font-bold text-sm border border-red-500/10"
+            >
+              <span data-i18n="reject">Reject</span>
+            </button>
+            <button
+              id="accept-btn"
+              onclick="acceptResult()"
+              class="flex items-center justify-center gap-2 py-3 bg-green-500/10 hover:bg-green-500/15 text-green-600 dark:text-green-400 rounded-xl transition-all font-bold text-sm border border-green-500/10"
+            >
+              <span data-i18n="accept">Accept</span>
+            </button>
+          </div>
+          <div class="flex gap-3 mt-3 text-xs text-primary">
+            <button onclick="saveResultToNotepad(false)">Save to Notepad</button>
+            <button onclick="copyTextResult()">Copy result</button>
+          </div>
+          <div
+            id="summarize-result-actions"
+            class="hidden grid grid-cols-1 mt-4"
+          >
+            <button
+              onclick="copySummary()"
+              class="flex items-center justify-center gap-2 py-3 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl transition-all font-bold text-sm border border-primary/10"
+            >
+              <span class="material-icons-outlined text-[18px]"
+                >content_copy</span
+              >
+              <span data-i18n="copy_clipboard">Copy to Clipboard</span>
+            </button>
+            <button
+              onclick="rejectResult()"
+              data-i18n="close"
+              class="mt-2 text-[11px] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-all"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+
+        <!-- Image Prompt View -->
+        <div id="image-prompt-view" class="hidden view-container animate-in fade-in slide-in-from-right-4 duration-300">
+          <div class="flex items-center gap-3 mb-4 px-1">
+            <button onclick="showView('menu')" class="p-1.5 hover:bg-zinc-500/10 rounded-full transition-all">
+              <span class="material-icons-outlined text-zinc-600 dark:text-zinc-400">arrow_back</span>
+            </button>
+            <h2 id="image-prompt-title" class="text-sm font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-widest">Generate Image</h2>
+          </div>
+          <div class="px-1 space-y-3">
+            <p class="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed" id="image-prompt-hint">
+              Describe the image you want to generate.
+            </p>
+            <textarea
+              id="image-prompt-input"
+              rows="6"
+              placeholder="Describe the image in detail..."
+              class="w-full bg-white/40 dark:bg-zinc-800/40 border border-white/20 dark:border-zinc-700/30 rounded-2xl px-4 py-3 text-[13px] text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 resize-none focus:outline-none focus:border-primary/30 transition-all"
+            ></textarea>
+            <button
+              onclick="handleGenerateImage()"
+              class="w-full py-3 bg-gradient-to-r from-pink-500 to-violet-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-pink-500/20 flex items-center justify-center gap-2 hover:shadow-pink-500/40 transition-all"
+            >
+              <span class="material-icons-outlined text-[18px]">auto_awesome</span>
+              Generate image
+            </button>
+          </div>
+        </div>
+
+        <!-- Image Loading View -->
+        <div id="image-loading-view" class="hidden py-12 text-center">
+          <div class="flex flex-col items-center gap-4">
+            <span class="material-icons-outlined text-5xl animate-spin" style="background:linear-gradient(135deg,#f472b6,#a78bfa);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">auto_awesome</span>
+            <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Generating image...</p>
+            <p class="text-[11px] text-zinc-400 dark:text-zinc-500">Using your selected image model</p>
+          </div>
+        </div>
+
+        <!-- Image Result View -->
+        <div id="image-result-view" class="hidden view-container animate-in fade-in duration-300">
+          <div class="flex items-center gap-3 mb-3 px-1">
+            <button onclick="showView('menu')" class="p-1.5 hover:bg-zinc-500/10 rounded-full transition-all">
+              <span class="material-icons-outlined text-zinc-600 dark:text-zinc-400">arrow_back</span>
+            </button>
+            <h2 class="text-sm font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-widest">Generated Image</h2>
+          </div>
+          <div class="rounded-2xl overflow-hidden border border-white/20 dark:border-zinc-700/30 bg-zinc-100 dark:bg-zinc-800/40 mb-3" style="max-height:220px;display:flex;align-items:center;justify-content:center;">
+            <img id="generated-image-preview" src="" alt="Generated image" style="max-width:100%;max-height:220px;object-fit:contain;display:block;" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <button
+              onclick="copyImageResult()"
+              class="flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-pink-500/80 to-violet-500/80 text-white rounded-xl font-bold text-sm shadow-lg transition-all hover:from-pink-500 hover:to-violet-500"
+            >
+              <span class="material-icons-outlined text-[18px]">content_paste</span>
+              Copy Image
+            </button>
+            <button
+              onclick="copyGeneratedImage()"
+              class="flex items-center justify-center gap-2 py-3 bg-white/30 dark:bg-zinc-700/30 text-zinc-800 dark:text-zinc-200 rounded-xl font-bold text-sm border border-white/20 dark:border-zinc-700/30 transition-all hover:bg-white/50 dark:hover:bg-zinc-700/50"
+            >
+              <span class="material-icons-outlined text-[18px]">download</span>
+              Download
+            </button>
+          </div>
+          <button onclick="saveResultToNotepad(true)" class="mt-3 w-full text-xs text-primary py-2">Save to Notepad</button>
+          <button
+            onclick="handleGenerateImage(currentImageMode)"
+            class="mt-2 w-full text-[11px] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-all py-1"
+          >
+            ↩ Generate another
+          </button>
+        </div>
+
+      </div>
+
+      <button
+        id="settings-toggle"
+        onclick="showView('settings')"
+        aria-label="Preferences"
+        title="Preferences"
+        class="absolute bottom-3 right-3 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-white/60 text-primary shadow-lg shadow-black/10 backdrop-blur-md transition-all hover:scale-105 hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-white/10 dark:bg-zinc-800/80 dark:hover:bg-primary/15"
+      >
+        <span class="material-icons-outlined text-[19px]">settings</span>
+      </button>
+
+      <!-- Notification Toast -->
+      <div
+        id="toast"
+        class="hidden fixed bottom-4 left-4 right-4 z-[9999] toast-animate-in"
+      >
+        <div
+          id="toast-content"
+          class="glass-effect bg-black/80 dark:bg-zinc-900/90 text-white rounded-2xl p-4 flex items-center gap-3 shadow-2xl border border-white/10"
+        >
+          <span id="toast-icon" class="material-icons-outlined">info</span>
+          <span id="toast-message" class="text-sm font-medium flex-1"></span>
+        </div>
+      </div>
+
+    </div>
+
+
+
+    </script>
+
+    <script>
+
+      const invoke = window.__TAURI__?.core?.invoke || (async () => {});
+      const listen = window.__TAURI__?.event?.listen || (async () => {});
+      const getCurrentWindow = window.__TAURI__?.window?.getCurrentWindow || (() => ({}));
+
+      window.openNotepadWindow = async function () {
+        try {
+          await invoke("open_notepad_window");
+        } catch (err) {
+          console.error("Failed to open notepad window:", err);
+        }
+      };
+
+      window.openClipboardWindow = async function () {
+        try {
+          await invoke("open_clipboard_window");
+        } catch (err) {
+          console.error("Failed to open clipboard window:", err);
+        }
+      };
+
+      window.openClipboardOnly = async function () {
+        try {
+          await invoke("open_clipboard_only_window");
+        } catch (err) {
+          console.error("Failed to open clipboard-only window:", err);
+        }
+      };
+
+
+      let capturedText = "";
+      let manualSelection = false;
+      let selectionVersion = 0;
+      let aiResult = "";
+      let currentAction = "";
+      let currentLang = localStorage.getItem("app_lang") || "en";
+      let settingsTab = "models";
+      const APP_SHORTCUT_STORAGE_KEY = "app_shortcut";
+      const CLIPBOARD_SHORTCUT_STORAGE_KEY = "clipboard_shortcut";
+      const DEFAULT_APP_SHORTCUT = "Ctrl+Shift+U";
+      const DEFAULT_CLIPBOARD_SHORTCUT = "Ctrl+Shift+V";
+      const CLIPBOARD_HISTORY_STORAGE_KEY = "ghost_writer_clipboard_history_v1";
+      const CLIPBOARD_SETTINGS_STORAGE_KEY = "ghost_writer_clipboard_settings_v1";
+      const DEFAULT_CLIPBOARD_SETTINGS = {
+        autoCapture: true,
+        maxItems: 50,
+      };
+      let clipboardSettings = loadClipboardSettings();
+
+      const translations = {
+        en: {
+          describe_change: "What would you like to change in this text?",
+          quick_actions: "Quick Actions",
+          improve_writing: "Improve writing",
+          fix_grammar: "Fix grammar",
+          summarize: "Summarize text",
+          rewrite_clearly: "Rewrite for clarity",
+          system: "System",
+          preferences: "Preferences",
+          general: "General",
+          clipboard: "Clipboard",
+          clipboard_help: "Manage your local clipboard history and capture behavior.",
+          clipboard_open_mode: "Open mode",
+          clipboard_open_only: "Open clipboard only",
+          clipboard_open_only_help: "Hide the main window and use Clipboard as a standalone tool.",
+          clipboard_open_only_action: "Open only Clipboard",
+          clipboard_shortcut: "Clipboard shortcut",
+          clipboard_shortcut_help: "Open Clipboard without opening the main window.",
+          edit: "Edit",
+          clipboard_behavior: "Behavior",
+          clipboard_auto_capture: "Automatic capture",
+          clipboard_auto_capture_help: "Capture new text copied anywhere while Ghost Writer is running.",
+          clipboard_history_limit: "History limit",
+          clipboard_history_limit_help: "Older unpinned items are removed first.",
+          clipboard_actions: "History actions",
+          clipboard_capture_now: "Capture now",
+          clipboard_clear_all: "Clear all history",
+          clipboard_local_note: "Clipboard history stays on this device and is never sent to an AI provider.",
+          clipboard_capture_success: "Clipboard checked",
+          clipboard_clear_confirm: "Clear all clipboard history?",
+          clipboard_cleared: "Clipboard history cleared",
+          clipboard_empty: "Clipboard is empty",
+          clipboard_item_stored: "{count} item stored",
+          clipboard_items_stored: "{count} items stored",
+          api_key: "API key",
+          api_key_placeholder: "Enter your API key",
+          save: "Save",
+          api_key_local_help: "Stored locally on this device.",
+          models: "Models",
+          models_help: "Connect the providers you use and choose the model for editing.",
+          defaults: "Defaults",
+          chat_model: "Chat model",
+          default_model_help: "Your selected provider and model are used for text actions.",
+          image_model: "Image model",
+          image_model_help: "Used by Generate Image and Generate Diagram. Add an image-capable provider below to use its image models.",
+          image_model_selected: "Image model selected",
+          no_image_models: "No connected image models",
+          connect_image_provider: "Connect an image-capable provider first.",
+          providers: "Providers",
+          providers_help: "Keys stay encrypted on this device and are sent only to the selected provider.",
+          add_provider: "Add provider",
+          cloud: "Cloud",
+          local_custom: "Local & custom",
+          no_providers: "No providers connected yet.",
+          no_providers_help: "Add a cloud provider, local model, or custom endpoint to get started.",
+          no_models: "No configured models",
+          models_local_help: "Provider keys and endpoint settings are stored locally. Ghost Writer does not proxy them through an application backend.",
+          connected: "Connected",
+          connected_toast: "connected",
+          docs: "Docs",
+          get_key: "Get key",
+          remove_provider: "Remove provider",
+          remove_key: "Remove key",
+          replace: "Replace",
+          paste_api_key: "Paste API key",
+          show_key: "Show key",
+          enter_api_key: "Enter your API key.",
+          base_url: "Base URL",
+          model_id: "Model ID",
+          image_model_id: "Image model ID",
+          context: "Context",
+          tokens: "tokens",
+          api_key_optional: "API key (optional)",
+          optional_key_hint: "Optional — leave empty for unauthenticated endpoints",
+          openrouter_help: "Use any model id from openrouter.ai/models.",
+          test: "Test",
+          testing: "Testing…",
+          reachable: "Reachable — server responded.",
+          could_not_reach: "Could not reach the server.",
+          model_selected: "Model selected",
+          connect_provider_first: "Connect a provider and select a model first.",
+          global_shortcut: "Global Shortcut",
+          appearance: "Appearance",
+          interface_theme: "Interface Theme",
+          language: "Language",
+          window_effects: "Window effects",
+          acrylic_blur: "Acrylic blur",
+          acrylic_blur_help: "Frosted-glass backdrop across all windows.",
+          blur_amount: "Blur amount",
+          blur_amount_help: "Strength of the frosted-glass effect.",
+          transparency: "Transparency",
+          transparency_help: "Opacity of the window background.",
+          synthesizing: "Synthesizing with AI...",
+          proposed_change: "Proposed Change",
+          reject: "Reject",
+          accept: "Accept",
+          copy_clipboard: "Copy to Clipboard",
+          close: "Close",
+          text_captured: "Text captured",
+          no_text_selected: "No text selected to capture",
+          text_captured_success: "Text captured successfully",
+          applied_success: "Applied successfully",
+          changes_discarded: "Changes discarded",
+          summary_copied: "Summary copied to clipboard",
+          api_key_error: "API key not configured",
+          select_text_first: "Select text and press shortcut first",
+        },
+        fr: {
+          describe_change: "Décrivez votre changement...",
+          quick_actions: "Actions rapides",
+          improve_writing: "Améliorer le texte",
+          fix_grammar: "Corriger la grammaire",
+          summarize: "Résumer le texte",
+          rewrite_clearly: "Réécrire clairement",
+          system: "Système",
+          preferences: "Préférences",
+          general: "Général",
+          clipboard: "Presse-papiers",
+          clipboard_help: "Gérez l’historique local du presse-papiers et sa capture.",
+          clipboard_open_mode: "Mode d’ouverture",
+          clipboard_open_only: "Ouvrir uniquement le presse-papiers",
+          clipboard_open_only_help: "Masquez la fenêtre principale et utilisez le presse-papiers seul.",
+          clipboard_open_only_action: "Ouvrir uniquement le presse-papiers",
+          clipboard_shortcut: "Raccourci du presse-papiers",
+          clipboard_shortcut_help: "Ouvrez le presse-papiers sans ouvrir la fenêtre principale.",
+          edit: "Modifier",
+          clipboard_behavior: "Comportement",
+          clipboard_auto_capture: "Capture automatique",
+          clipboard_auto_capture_help: "Capturez les nouveaux textes copiés pendant que Ghost Writer est ouvert.",
+          clipboard_history_limit: "Limite de l’historique",
+          clipboard_history_limit_help: "Les éléments non épinglés les plus anciens sont supprimés en premier.",
+          clipboard_actions: "Actions de l’historique",
+          clipboard_capture_now: "Capturer maintenant",
+          clipboard_clear_all: "Effacer l’historique",
+          clipboard_local_note: "L’historique reste sur cet appareil et n’est jamais envoyé à un fournisseur d’IA.",
+          clipboard_capture_success: "Presse-papiers vérifié",
+          clipboard_clear_confirm: "Effacer tout l’historique du presse-papiers ?",
+          clipboard_cleared: "Historique du presse-papiers effacé",
+          clipboard_empty: "Le presse-papiers est vide",
+          clipboard_item_stored: "{count} élément enregistré",
+          clipboard_items_stored: "{count} éléments enregistrés",
+          api_key: "Clé API",
+          api_key_placeholder: "Saisissez votre clé API",
+          save: "Enregistrer",
+          api_key_local_help: "Stockée localement sur cet appareil.",
+          global_shortcut: "Raccourci global",
+          appearance: "Apparence",
+          interface_theme: "Thème de l'interface",
+          language: "Langue",
+          window_effects: "Effets de fenêtre",
+          acrylic_blur: "Flou acrylique",
+          acrylic_blur_help: "Arrière-plan en verre dépoli sur toutes les fenêtres.",
+          blur_amount: "Intensité du flou",
+          blur_amount_help: "Force de l'effet verre dépoli.",
+          transparency: "Transparence",
+          transparency_help: "Opacité de l'arrière-plan des fenêtres.",
+          synthesizing: "Synthèse par l'IA...",
+          proposed_change: "Changement proposé",
+          reject: "Rejeter",
+          accept: "Accepter",
+          copy_clipboard: "Copier",
+          close: "Fermer",
+          text_captured: "Texte capturé",
+          no_text_selected: "Aucun texte sélectionné",
+          text_captured_success: "Texte capturé avec succès",
+          applied_success: "Appliqué avec succès",
+          changes_discarded: "Changements ignorés",
+          summary_copied: "Résumé copié",
+          api_key_error: "Clé API non configurée",
+          select_text_first: "Sélectionnez d'abord du texte",
+        },
+        ar: {
+          describe_change: "صف تغييرك...",
+          quick_actions: "إجراءات سريعة",
+          improve_writing: "تحسين الكتابة",
+          fix_grammar: "تصحيح القواعد الإملائية",
+          summarize: "تلخيص النص",
+          rewrite_clearly: "إعادة الكتابة بوضوح",
+          system: "النظام",
+          preferences: "التفضيلات",
+          general: "عام",
+          clipboard: "الحافظة",
+          clipboard_help: "إدارة سجل الحافظة المحلي وسلوك الالتقاط.",
+          clipboard_open_mode: "وضع الفتح",
+          clipboard_open_only: "فتح الحافظة فقط",
+          clipboard_open_only_help: "إخفاء النافذة الرئيسية واستخدام الحافظة كأداة مستقلة.",
+          clipboard_open_only_action: "فتح الحافظة فقط",
+          clipboard_shortcut: "اختصار الحافظة",
+          clipboard_shortcut_help: "فتح الحافظة دون فتح النافذة الرئيسية.",
+          edit: "تعديل",
+          clipboard_behavior: "السلوك",
+          clipboard_auto_capture: "التقاط تلقائي",
+          clipboard_auto_capture_help: "التقاط النصوص الجديدة التي تنسخها أثناء تشغيل Ghost Writer.",
+          clipboard_history_limit: "حد السجل",
+          clipboard_history_limit_help: "تُحذف العناصر غير المثبتة الأقدم أولاً.",
+          clipboard_actions: "إجراءات السجل",
+          clipboard_capture_now: "التقاط الآن",
+          clipboard_clear_all: "مسح السجل بالكامل",
+          clipboard_local_note: "يبقى سجل الحافظة على هذا الجهاز ولا يُرسل إلى أي مزود للذكاء الاصطناعي.",
+          clipboard_capture_success: "تم فحص الحافظة",
+          clipboard_clear_confirm: "هل تريد مسح سجل الحافظة بالكامل؟",
+          clipboard_cleared: "تم مسح سجل الحافظة",
+          clipboard_empty: "الحافظة فارغة",
+          clipboard_item_stored: "تم حفظ {count} عنصر",
+          clipboard_items_stored: "تم حفظ {count} عناصر",
+          api_key: "مفتاح API",
+          api_key_placeholder: "أدخل مفتاح API",
+          save: "حفظ",
+          api_key_local_help: "يُخزّن محلياً على هذا الجهاز.",
+          global_shortcut: "اختصار عام",
+          appearance: "المظهر",
+          interface_theme: "سمة الواجهة",
+          language: "اللغة",
+          window_effects: "تأثيرات النافذة",
+          acrylic_blur: "توهج أكريليك",
+          acrylic_blur_help: "خلفية زجاجية مصنفرة على جميع النوافذ.",
+          blur_amount: "مقدار التوهج",
+          blur_amount_help: "قوة تأثير الزجاج المصنفر.",
+          transparency: "الشفافية",
+          transparency_help: "عتامة خلفية النوافذ.",
+          synthesizing: "جاري المعالجة بالذكاء الاصطناعي...",
+          proposed_change: "التغيير المقترح",
+          reject: "رفض",
+          accept: "قبول",
+          copy_clipboard: "نسخ إلى الحافظة",
+          close: "إغلاق",
+          text_captured: "تم التقاط النص",
+          no_text_selected: "لم يتم تحديد نص",
+          text_captured_success: "تم التقاط النص بنجاح",
+          applied_success: "تم التطبيق بنجاح",
+          changes_discarded: "تم تجاهل التغييرات",
+          summary_copied: "تم نسخ الملخص",
+          api_key_error: "لم يتم تهيئة مفتاح API",
+          select_text_first: "حدد النص أولاً",
+        },
+      };
+
+      function t(key) {
+        return translations[currentLang][key] || translations["en"][key] || key;
+      }
+
+      function normalizeClipboardSettings(value) {
+        const incoming = value && typeof value === "object" ? value : {};
+        const allowedLimits = [25, 50, 100, 200];
+        const maxItems = Number(incoming.maxItems);
+        return {
+          autoCapture: incoming.autoCapture !== false,
+          maxItems: allowedLimits.includes(maxItems) ? maxItems : DEFAULT_CLIPBOARD_SETTINGS.maxItems,
+        };
+      }
+
+      function loadClipboardSettings() {
+        try {
+          return normalizeClipboardSettings(JSON.parse(localStorage.getItem(CLIPBOARD_SETTINGS_STORAGE_KEY) || "{}"));
+        } catch (_) {
+          return { ...DEFAULT_CLIPBOARD_SETTINGS };
+        }
+      }
+
+      function getClipboardHistory() {
+        try {
+          const stored = JSON.parse(localStorage.getItem(CLIPBOARD_HISTORY_STORAGE_KEY) || "[]");
+          return Array.isArray(stored)
+            ? stored.filter((item) => item && typeof item.text === "string")
+            : [];
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function trimClipboardHistory(history) {
+        history.sort((a, b) => Number(b.pinned) - Number(a.pinned) || Number(b.createdAt) - Number(a.createdAt));
+        while (history.length > clipboardSettings.maxItems) {
+          const removableIndex = history.findLastIndex((item) => !item.pinned);
+          if (removableIndex < 0) break;
+          history.splice(removableIndex, 1);
+        }
+      }
+
+      function saveClipboardHistory(history) {
+        trimClipboardHistory(history);
+        localStorage.setItem(CLIPBOARD_HISTORY_STORAGE_KEY, JSON.stringify(history));
+        updateClipboardSettingsUI();
+      }
+
+      function addClipboardHistoryItem(text) {
+        if (typeof text !== "string" || !text.trim()) return;
+        const history = getClipboardHistory();
+        const existing = history.find((item) => item.text === text);
+        if (existing) {
+          existing.createdAt = Date.now();
+        } else {
+          history.push({
+            id: crypto.randomUUID ? crypto.randomUUID() : `clip_${Date.now()}`,
+            text,
+            pinned: false,
+            createdAt: Date.now(),
+          });
+        }
+        saveClipboardHistory(history);
+      }
+
+      listen("clipboard-captured", (event) => {
+        if (!clipboardSettings.autoCapture) return;
+        try {
+          addClipboardHistoryItem(event.payload);
+          void sendClipboardCommand("refresh");
+        } catch (_) {
+          showToast("Clipboard storage is full. Remove old items in Preferences.", "error");
+        }
+      }).then(() => invoke("start_clipboard_monitor")).catch(console.error);
+
+      window.addEventListener("storage", (event) => {
+        if (event.key === CLIPBOARD_HISTORY_STORAGE_KEY) updateClipboardSettingsUI();
+      });
+
+      async function useCopiedText() {
+        try {
+          const text = await invoke("read_clipboard_text");
+          if (!text?.trim()) { showToast("Copy some text first.", "info"); return; }
+          capturedText = text;
+          selectionVersion++;
+          aiResult = "";
+          manualSelection = true;
+          document.getElementById("captured-preview").textContent = text.slice(0, 40);
+          document.getElementById("captured-indicator").classList.remove("hidden");
+          showToast("Text loaded. Copy the result to paste it back manually.", "info");
+        } catch (error) { showToast(extractErrorMessage(error), "error"); }
+      }
+
+      async function copyTextResult() {
+        if (!aiResult) return;
+        try {
+          await invoke("write_to_clipboard", { text: aiResult });
+          addClipboardHistoryItem(aiResult);
+          await sendClipboardCommand("refresh");
+          showToast("Copied to Clipboard", "success");
+        } catch (error) { showToast(extractErrorMessage(error), "error"); }
+      }
+
+      async function copyImageResult() {
+        if (!currentGeneratedBase64) return;
+        try {
+          const png = await generatedImageAsPngBase64();
+          await invoke("copy_image_to_clipboard", { base64Png: png });
+          addClipboardHistoryItem(`data:image/png;base64,${png}`);
+          await sendClipboardCommand("refresh");
+          showToast("Image copied to Clipboard", "success");
+        } catch (error) { showToast(extractErrorMessage(error), "error"); }
+      }
+
+      async function saveResultToNotepad(isImage) {
+        if (isImage ? !currentGeneratedBase64 : !aiResult) return;
+        try {
+          const key = "ghost_writer_notepad_v2";
+          const notes = JSON.parse(localStorage.getItem(key) || "[]");
+          const now = new Date().toISOString();
+          notes.unshift({ id: crypto.randomUUID(),
+            title: isImage ? (currentImageMode === "diagram" ? "Generated diagram" : "Generated image") : (currentAction === "summarize" ? "Summary" : "Improved writing"),
+            content: isImage ? capturedText : aiResult,
+            image: isImage ? getGeneratedImageDataUrl() : null,
+            createdAt: now, updatedAt: now });
+          localStorage.setItem(key, JSON.stringify(notes));
+          showToast("Saved to Notepad", "success");
+          await invoke("open_notepad_window");
+        } catch (error) { showToast("Could not save note: " + extractErrorMessage(error), "error"); }
+      }
+
+      async function sendClipboardCommand(command) {
+        try {
+          await invoke("clipboard_command", { command });
+        } catch (error) {
+          console.debug("Clipboard window command unavailable", error);
+        }
+      }
+
+      function updateClipboardSettingsUI() {
+        const autoCapture = document.getElementById("clipboard-auto-capture");
+        const historyLimit = document.getElementById("clipboard-history-limit");
+        const itemCount = document.getElementById("clipboard-item-count");
+        if (autoCapture) autoCapture.checked = clipboardSettings.autoCapture;
+        if (historyLimit) historyLimit.value = String(clipboardSettings.maxItems);
+        if (itemCount) {
+          const count = getClipboardHistory().length;
+          itemCount.textContent = t(count === 1 ? "clipboard_item_stored" : "clipboard_items_stored").replace("{count}", count);
+        }
+      }
+
+      function saveClipboardSetting(field, value) {
+        clipboardSettings = normalizeClipboardSettings({
+          ...clipboardSettings,
+          [field]: value,
+        });
+        localStorage.setItem(CLIPBOARD_SETTINGS_STORAGE_KEY, JSON.stringify(clipboardSettings));
+        saveClipboardHistory(getClipboardHistory());
+        void sendClipboardCommand(JSON.stringify({ type: "settings", settings: clipboardSettings }));
+      }
+
+      async function captureClipboardNow() {
+        try {
+          const text = await invoke("read_clipboard_text");
+          if (typeof text !== "string" || !text.trim()) {
+            showToast(t("clipboard_empty"), "info");
+            return;
+          }
+          addClipboardHistoryItem(text);
+          await sendClipboardCommand("refresh");
+          showToast(t("clipboard_capture_success"), "success");
+        } catch (error) {
+          showToast("Clipboard Error: " + extractErrorMessage(error), "error");
+        }
+      }
+
+      async function clearClipboardHistory() {
+        if (!getClipboardHistory().length || !confirm(t("clipboard_clear_confirm"))) return;
+        localStorage.removeItem(CLIPBOARD_HISTORY_STORAGE_KEY);
+        updateClipboardSettingsUI();
+        await sendClipboardCommand("clear");
+        showToast(t("clipboard_cleared"), "info");
+      }
+
+      function applyTranslations() {
+        document.querySelectorAll("[data-i18n]").forEach((el) => {
+          const key = el.getAttribute("data-i18n");
+          el.textContent = t(key);
+        });
+
+        document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+          const key = el.getAttribute("data-i18n-placeholder");
+          el.placeholder = t(key);
+        });
+
+        // Handle RTL
+        const html = document.getElementById("html-root");
+        if (currentLang === "ar") {
+          html.dir = "rtl";
+          html.lang = "ar";
+          document.body.style.fontFamily = "'Inter', Arial, sans-serif";
+        } else {
+          html.dir = "ltr";
+          html.lang = currentLang;
+          document.body.style.fontFamily = "'Inter', sans-serif";
+        }
+
+        // Update select value if it exists
+        const langSelect = document.getElementById("language-select");
+        if (langSelect) langSelect.value = currentLang;
+        updateClipboardSettingsUI();
+      }
+
+      function changeLanguage(lang) {
+        currentLang = lang;
+        localStorage.setItem("app_lang", lang);
+        applyTranslations();
+        renderModelSettings();
+        updateThemeLabel(); // Refresh any labels that might have changed
+      }
+
+      function extractErrorMessage(err, fallback = "Request failed") {
+        if (!err) return fallback;
+        if (typeof err === "string") return err;
+        if (err.message && typeof err.message === "string") return err.message;
+        if (err.error && typeof err.error === "string") return err.error;
+        if (typeof err === "object") {
+          try {
+            return JSON.stringify(err);
+          } catch (_) {}
+        }
+        return String(err) || fallback;
+      }
+
+      // UI Toast Notification System
+      function showToast(message, type = "info", duration = 3000) {
+        const toast = document.getElementById("toast");
+        const toastIcon = document.getElementById("toast-icon");
+        const toastMessage = document.getElementById("toast-message");
+
+        if (!toast || !toastMessage) return;
+
+        const normalizedMessage = extractErrorMessage(
+          message,
+          "Request failed",
+        );
+        toastMessage.textContent = normalizedMessage;
+
+        // Set styles based on type
+        if (type === "error") {
+          if (toastIcon) {
+            toastIcon.textContent = "error_outline";
+            toastIcon.className = "material-icons-outlined text-red-400";
+          }
+        } else if (type === "success") {
+          if (toastIcon) {
+            toastIcon.textContent = "check_circle_outline";
+            toastIcon.className = "material-icons-outlined text-green-400";
+          }
+        } else {
+          if (toastIcon) {
+            toastIcon.textContent = "info";
+            toastIcon.className = "material-icons-outlined text-blue-400";
+          }
+        }
+
+        toast.classList.remove("hidden");
+        toast.classList.remove("toast-animate-out");
+        toast.classList.add("toast-animate-in");
+
+        if (window.toastTimeout) clearTimeout(window.toastTimeout);
+        window.toastTimeout = setTimeout(() => {
+          toast.classList.remove("toast-animate-in");
+          toast.classList.add("toast-animate-out");
+          setTimeout(() => toast.classList.add("hidden"), 300);
+        }, duration);
+      }
+
+      function showConfirmModal({
+        title = t("confirm_action"),
+        message = t("are_you_sure"),
+        okText = t("accept"),
+        cancelText = t("cancel"),
+        intent = "danger",
+      } = {}) {
+        const modal = document.getElementById("confirm-modal");
+        const titleEl = document.getElementById("confirm-title");
+        const messageEl = document.getElementById("confirm-message");
+        const okBtn = document.getElementById("confirm-ok");
+        const cancelBtn = document.getElementById("confirm-cancel");
+
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        okBtn.textContent = okText;
+        cancelBtn.textContent = cancelText;
+
+        if (intent === "danger") {
+          okBtn.className =
+            "w-full py-2.5 rounded-xl bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-all";
+        } else if (intent === "primary") {
+          okBtn.className =
+            "w-full py-2.5 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all";
+        } else {
+          okBtn.className =
+            "w-full py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold text-sm hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all";
+        }
+
+        modal.classList.remove("hidden");
+
+        return new Promise((resolve) => {
+          const cleanup = () => {
+            modal.classList.add("hidden");
+            okBtn.removeEventListener("click", onOk);
+            cancelBtn.removeEventListener("click", onCancel);
+            modal.removeEventListener("click", onBackdrop);
+          };
+          const onOk = () => {
+            cleanup();
+            resolve(true);
+          };
+          const onCancel = () => {
+            cleanup();
+            resolve(false);
+          };
+          const onBackdrop = (e) => {
+            if (e.target === modal) onCancel();
+          };
+
+          okBtn.addEventListener("click", onOk, { once: true });
+          cancelBtn.addEventListener("click", onCancel, { once: true });
+          modal.addEventListener("click", onBackdrop);
+        });
+      }
+
+      const menuEl = document.getElementById("floating-menu");
+      menuEl.addEventListener("mousedown", async (e) => {
+        if (e.target.closest("button, input, a, select, textarea, #result-text")) return;
+        await getCurrentWindow().startDragging();
+      });
+
+      function toggleTheme() {
+        const isDark = document.documentElement.classList.contains("dark");
+        saveAppearanceSetting("theme", isDark ? "light" : "dark");
+      }
+
+      function saveAppearanceSetting(key, value) {
+        const patch = {};
+        if (key === "theme") patch.theme = value === "dark" ? "dark" : "light";
+        else if (key === "acrylic") patch.acrylic = Boolean(value);
+        else if (key === "blurAmount") patch.blurAmount = Number(value);
+        else if (key === "transparency") patch.transparency = Number(value);
+        if (window.Appearance) Appearance.set(patch);
+        updateAppearanceUI();
+      }
+
+      function onAppearanceSlider(kind) {
+        const el = document.getElementById(kind === "blur" ? "appearance-blur" : "appearance-transparency");
+        if (!el) return;
+        saveAppearanceSetting(kind === "blur" ? "blurAmount" : "transparency", Number(el.value));
+      }
+
+      function updateAppearanceUI() {
+        let a = null;
+        if (window.Appearance) a = Appearance.get();
+        else {
+          const root = document.documentElement;
+          a = {
+            theme: root.classList.contains("dark") ? "dark" : "light",
+            acrylic: !root.classList.contains("no-acrylic"),
+            blurAmount: 20,
+            transparency: 95,
+          };
+        }
+        const acrylic = document.getElementById("appearance-acrylic");
+        if (acrylic) acrylic.checked = a.acrylic;
+        const blur = document.getElementById("appearance-blur");
+        if (blur) blur.value = String(a.blurAmount);
+        const blurValue = document.getElementById("appearance-blur-value");
+        if (blurValue) blurValue.textContent = a.blurAmount + "px";
+        const transparency = document.getElementById("appearance-transparency");
+        if (transparency) transparency.value = String(a.transparency);
+        const transparencyValue = document.getElementById("appearance-transparency-value");
+        if (transparencyValue) transparencyValue.textContent = a.transparency + "%";
+        updateThemeLabel();
+      }
+
+      function updateThemeLabel() {
+        const isDark = document.documentElement.classList.contains("dark");
+        document.getElementById("theme-label").textContent = isDark
+          ? currentLang === "ar"
+            ? "داكن"
+            : currentLang === "fr"
+              ? "Sombre"
+              : "Dark"
+          : currentLang === "ar"
+            ? "فاتح"
+            : currentLang === "fr"
+              ? "Clair"
+              : "Light";
+      }
+
+      window.addEventListener("DOMContentLoaded", async () => {
+        const savedShortcut =
+          localStorage.getItem(APP_SHORTCUT_STORAGE_KEY) || DEFAULT_APP_SHORTCUT;
+        const savedClipboardShortcut =
+          localStorage.getItem(CLIPBOARD_SHORTCUT_STORAGE_KEY) || DEFAULT_CLIPBOARD_SHORTCUT;
+        document.getElementById("shortcut-display").textContent = savedShortcut;
+        document.getElementById("clipboard-shortcut-display").textContent = savedClipboardShortcut;
+
+        try {
+          await invoke("configure_shortcuts", {
+            appShortcut: savedShortcut,
+            clipboardShortcut: savedClipboardShortcut,
+          });
+        } catch (e) {
+          console.error("Shortcut registration failed:", e);
+          showToast("Failed to register shortcut system", "error");
+        }
+        applyTranslations();
+        updateThemeLabel();
+        updateAppearanceUI();
+        showView("menu");
+        await loadAiSettings();
+      });
+
+      window.addEventListener("appearancechange", updateAppearanceUI);
+
+      const AI_SETTINGS_STORAGE_KEY = "ghost_writer_ai_settings_enc";
+      const LEGACY_AI_SETTINGS_STORAGE_KEY = "luminus_ai_settings_enc";
+      const LEGACY_API_KEY_STORAGE_KEY = "luminus_openai_api_key_enc";
+
+      const PROVIDER_CATALOG = [
+        {
+          id: "openai",
+          label: "OpenAI",
+          type: "cloud",
+          keyPrefix: "sk-",
+          docs: "https://platform.openai.com/api-keys",
+          icon: "auto_awesome",
+          models: [
+            ["gpt-4.1-mini", "GPT-4.1 mini", "Cheap", "Fast everyday editing."],
+            ["gpt-4.1", "GPT-4.1", "Balanced", "Strong writing and reasoning."],
+            ["gpt-5.4-mini", "GPT-5.4 mini", "Fast", "Snappy default at low cost."],
+            ["gpt-5.4-nano", "GPT-5.4 nano", "Fastest", "Tiny and instant for quick tasks."],
+            ["gpt-5.3-codex", "GPT-5.3 Codex", "Coding", "Tuned for code and tool use."],
+            ["gpt-5.5", "GPT-5.5", "Flagship", "Frontier reasoning and code."],
+          ],
+        },
+        {
+          id: "anthropic",
+          label: "Anthropic",
+          type: "cloud",
+          keyPrefix: "sk-ant-",
+          docs: "https://console.anthropic.com/settings/keys",
+          icon: "psychology",
+          models: [
+            ["claude-sonnet-4-6", "Claude Sonnet 4.6", "Balanced", "Quality and speed for everyday work."],
+            ["claude-opus-4-8", "Claude Opus 4.8", "Best", "Complex reasoning and long documents."],
+            ["claude-opus-4-7", "Claude Opus 4.7", "Previous", "Previous-generation flagship reasoning."],
+            ["claude-haiku-4-5", "Claude Haiku 4.5", "Fast", "Quick, capable, and efficient."],
+            ["claude-opus-4-6", "Claude Opus 4.6", "Legacy", "Previous-generation Opus."],
+          ],
+        },
+        {
+          id: "google",
+          label: "Google Gemini",
+          type: "cloud",
+          keyPrefix: "",
+          docs: "https://aistudio.google.com/apikey",
+          icon: "diamond",
+          models: [
+            ["gemini-2.5-flash", "Gemini 2.5 Flash", "Fast", "Fast multimodal editing."],
+            ["gemini-2.5-pro", "Gemini 2.5 Pro", "Stable", "Deep reasoning and long context."],
+            ["gemini-3.5-flash", "Gemini 3.5 Flash", "Fast", "High-intelligence multimodal model."],
+            ["gemini-3.1-flash-lite", "Gemini 3.1 Flash-Lite", "Lite", "Fast, cheap, and lightweight."],
+            ["gemini-3-flash-preview", "Gemini 3 Flash", "Fast", "Fast multimodal model."],
+            ["gemini-3.1-pro-preview", "Gemini 3.1 Pro", "Flagship", "Strong reasoning and 1M context."],
+          ],
+        },
+        {
+          id: "xai",
+          label: "xAI",
+          type: "cloud",
+          keyPrefix: "xai-",
+          docs: "https://console.x.ai/",
+          icon: "bolt",
+          models: [
+            ["grok-4.20-reasoning", "Grok 4.20 Reasoning", "Reasoning", "Frontier reasoning with extended thinking."],
+            ["grok-4.20-non-reasoning", "Grok 4.20", "Fast", "Fast tier for everyday editing."],
+            ["grok-4-fast-reasoning", "Grok 4 Fast", "Reasoning", "Cheaper Grok with vision and reasoning."],
+            ["grok-4.3", "Grok 4.3", "Flagship", "Strong agentic reasoning and coding."],
+            ["grok-build-0.1", "Grok Build 0.1", "Coding", "Specialized coding model."],
+          ],
+        },
+        {
+          id: "cerebras",
+          label: "Cerebras",
+          type: "cloud",
+          keyPrefix: "csk-",
+          docs: "https://cloud.cerebras.ai/",
+          icon: "speed",
+          models: [
+            ["gpt-oss-120b", "GPT-OSS 120B", "Ultra-fast", "Fast inference for quick tasks."],
+            ["llama3.3-70b", "Llama 3.3 70B", "Fast", "Broadly capable open model."],
+            ["qwen-3-32b", "Qwen 3 32B", "Fast", "Fast multilingual model."],
+          ],
+        },
+        {
+          id: "groq",
+          label: "Groq",
+          type: "cloud",
+          keyPrefix: "gsk_",
+          docs: "https://console.groq.com/keys",
+          icon: "flash_on",
+          models: [
+            ["openai/gpt-oss-20b", "GPT-OSS 20B", "Ultra-fast", "Sub-second responses on Groq."],
+            ["llama-3.3-70b-versatile", "Llama 3.3 70B", "Versatile", "Fast and broadly capable."],
+            ["deepseek-r1-distill-llama-70b", "DeepSeek R1 Distill 70B", "Thinking", "Reasoning-distilled Llama."],
+          ],
+        },
+        {
+          id: "deepseek",
+          label: "DeepSeek",
+          type: "cloud",
+          keyPrefix: "sk-",
+          docs: "https://platform.deepseek.com/api_keys",
+          icon: "explore",
+          models: [
+            ["deepseek-v4-pro", "DeepSeek V4 Pro", "Best", "Strong open-weight code model."],
+            ["deepseek-v4-flash", "DeepSeek V4 Flash", "Fast", "Cheap and fast everyday tier."],
+            ["deepseek-reasoner", "DeepSeek Reasoner", "Thinking", "Reasoning at open-model prices."],
+          ],
+        },
+        {
+          id: "mistral",
+          label: "Mistral",
+          type: "cloud",
+          keyPrefix: "",
+          docs: "https://console.mistral.ai/api-keys/",
+          icon: "waves",
+          models: [
+            ["mistral-large-latest", "Mistral Large 3", "Best", "Flagship Mistral model."],
+            ["mistral-medium-latest", "Mistral Medium 3.5", "Balanced", "Good balance of speed and quality."],
+            ["codestral-latest", "Codestral", "Code", "Purpose-built coding model."],
+          ],
+        },
+        {
+          id: "openrouter",
+          label: "OpenRouter",
+          type: "cloud",
+          keyPrefix: "sk-or-",
+          docs: "https://openrouter.ai/keys",
+          icon: "hub",
+          freeModel: true,
+          models: [],
+        },
+        {
+          id: "lmstudio",
+          label: "LM Studio",
+          type: "local",
+          docs: "https://lmstudio.ai/docs/basics/server",
+          icon: "memory",
+          baseUrl: "http://localhost:1234/v1",
+          modelPlaceholder: "qwen2.5-coder-7b-instruct",
+          description: "Run local GGUF models via LM Studio’s HTTP server.",
+        },
+        {
+          id: "mlx",
+          label: "MLX",
+          type: "local",
+          docs: "https://github.com/ml-explore/mlx-lm/blob/main/mlx_lm/SERVER.md",
+          icon: "developer_board",
+          baseUrl: "http://127.0.0.1:8080/v1",
+          modelPlaceholder: "mlx-community/Qwen2.5-Coder-7B-Instruct-4bit",
+          description: "Apple-silicon inference via mlx_lm.server.",
+        },
+        {
+          id: "ollama",
+          label: "Ollama",
+          type: "local",
+          docs: "https://ollama.com/download",
+          icon: "dns",
+          baseUrl: "http://localhost:11434/v1",
+          modelPlaceholder: "qwen2.5-coder:7b",
+          description: "Local models through Ollama’s OpenAI-compatible API.",
+        },
+      ];
+
+      const IMAGE_MODEL_CATALOG = [
+        {
+          provider: "openai",
+          id: "gpt-image-2",
+          label: "GPT Image 2",
+          hint: "Latest",
+          description: "OpenAI’s current image generation model.",
+        },
+        {
+          provider: "openai",
+          id: "gpt-image-1",
+          label: "GPT Image 1",
+          hint: "Compatible",
+          description: "OpenAI’s previous image generation model.",
+        },
+        {
+          provider: "openai",
+          id: "dall-e-3",
+          label: "DALL·E 3",
+          hint: "Legacy",
+          description: "Legacy OpenAI image generation model.",
+        },
+        {
+          provider: "google",
+          id: "gemini-2.0-flash-preview-image-generation",
+          label: "Gemini Image Generation",
+          hint: "Native",
+          description: "Gemini image output with inline image data.",
+        },
+        {
+          provider: "google",
+          id: "gemini-3.1-flash-image",
+          label: "Gemini 3.1 Flash Image",
+          hint: "Nano Banana",
+          description: "Google’s native image generation model.",
+        },
+        {
+          provider: "google",
+          id: "gemini-3.1-flash-lite-image",
+          label: "Gemini 3.1 Flash Lite Image",
+          hint: "Fast",
+          description: "Google’s faster, lower-cost image generation model.",
+        },
+        {
+          provider: "google",
+          id: "gemini-3-pro-image",
+          label: "Gemini 3 Pro Image",
+          hint: "Pro",
+          description: "Google’s high-fidelity image generation model.",
+        },
+        {
+          provider: "google",
+          id: "gemini-2.5-flash-image",
+          label: "Gemini 2.5 Flash Image",
+          hint: "Compatible",
+          description: "Google’s compatible Nano Banana image model.",
+        },
+        {
+          provider: "xai",
+          id: "grok-imagine-image-2.0",
+          label: "Grok Imagine 2.0",
+          hint: "Image",
+          description: "xAI image generation through the Images API.",
+        },
+        {
+          provider: "openrouter",
+          id: "bytedance-seed/seedream-4.5",
+          label: "Seedream 4.5",
+          hint: "OpenRouter",
+          description: "OpenRouter’s image generation catalog.",
+        },
+        {
+          provider: "openrouter",
+          id: "black-forest-labs/flux.2-pro",
+          label: "FLUX.2 Pro",
+          hint: "OpenRouter",
+          description: "High-quality image generation through OpenRouter.",
+        },
+      ];
+
+      let aiSettings = null;
+      let aiSettingsLoaded = false;
+
+      listen("selection-captured", (event) => {
+        selectionVersion++;
+        aiResult = "";
+        manualSelection = false;
+        capturedText = event.payload;
+        if (!capturedText || capturedText.trim() === "") {
+          document.getElementById("captured-indicator").classList.add("hidden");
+          showToast("Could not capture selected text. Copy it in your source app, then choose Use copied text.", "info", 6000);
+          capturedText = "";
+          return;
+        }
+
+        const preview =
+          capturedText.length > 40
+            ? capturedText.substring(0, 40) + "..."
+            : capturedText;
+        document.getElementById("captured-preview").textContent = preview;
+        document
+          .getElementById("captured-indicator")
+          .classList.remove("hidden");
+        showView("menu");
+        document.getElementById("prompt-input").value = "";
+        showToast(t("text_captured_success"), "success", 2000);
+      });
+
+      async function updateAppShortcut(shortcut) {
+        try {
+          const clipboardShortcut =
+            localStorage.getItem(CLIPBOARD_SHORTCUT_STORAGE_KEY) || DEFAULT_CLIPBOARD_SHORTCUT;
+          await invoke("configure_shortcuts", {
+            appShortcut: shortcut,
+            clipboardShortcut,
+          });
+          localStorage.setItem(APP_SHORTCUT_STORAGE_KEY, shortcut);
+          document.getElementById("shortcut-display").textContent = shortcut;
+          showToast(`Shortcut set to ${shortcut}`, "success");
+          return true;
+        } catch (e) {
+          showToast(extractErrorMessage(e, "Could not register shortcut"), "error");
+          console.error("Shortcut registration failed:", e);
+          return false;
+        }
+      }
+
+      async function updateClipboardShortcut(shortcut) {
+        try {
+          const appShortcut = localStorage.getItem(APP_SHORTCUT_STORAGE_KEY) || DEFAULT_APP_SHORTCUT;
+          await invoke("configure_shortcuts", {
+            appShortcut,
+            clipboardShortcut: shortcut,
+          });
+          localStorage.setItem(CLIPBOARD_SHORTCUT_STORAGE_KEY, shortcut);
+          document.getElementById("clipboard-shortcut-display").textContent = shortcut;
+          showToast(`Clipboard shortcut set to ${shortcut}`, "success");
+          return true;
+        } catch (e) {
+          showToast(extractErrorMessage(e, "Could not register clipboard shortcut"), "error");
+          console.error("Clipboard shortcut registration failed:", e);
+          return false;
+        }
+      }
+
+      function startRecordingShortcut() {
+        startRecordingShortcutFor("shortcut-display", updateAppShortcut);
+      }
+
+      function startRecordingClipboardShortcut() {
+        startRecordingShortcutFor("clipboard-shortcut-display", updateClipboardShortcut);
+      }
+
+      function startRecordingShortcutFor(displayId, saveShortcut) {
+        const display = document.getElementById(displayId);
+        const originalText = display.textContent;
+        display.textContent = "...";
+        display.classList.add("text-primary");
+
+        const handleKeys = async (e) => {
+          e.preventDefault();
+          const modifiers = [];
+          if (e.ctrlKey) modifiers.push("Ctrl");
+          if (e.shiftKey) modifiers.push("Shift");
+          if (e.altKey) modifiers.push("Alt");
+          if (e.metaKey) modifiers.push("Command");
+
+          const key = e.key === " " ? "Space" : e.key.toUpperCase();
+          if (["CONTROL", "SHIFT", "ALT", "META"].includes(key)) return;
+
+          const finalShortcut = [...modifiers, key].join("+");
+          window.removeEventListener("keydown", handleKeys, true);
+          display.classList.remove("text-primary");
+
+          if (!(await saveShortcut(finalShortcut))) {
+            display.textContent = originalText;
+          }
+        };
+        window.addEventListener("keydown", handleKeys, true);
+      }
+
+      function selectSettingsTab(tab) {
+        settingsTab = tab === "general" ? "general" : tab === "clipboard" ? "clipboard" : "models";
+        const modelPanel = document.getElementById("settings-models-panel");
+        const generalPanel = document.getElementById("settings-general-panel");
+        const clipboardPanel = document.getElementById("settings-clipboard-panel");
+        if (!modelPanel || !generalPanel || !clipboardPanel) return;
+
+        modelPanel.classList.toggle("hidden", settingsTab !== "models");
+        generalPanel.classList.toggle("hidden", settingsTab !== "general");
+        clipboardPanel.classList.toggle("hidden", settingsTab !== "clipboard");
+        updateClipboardSettingsUI();
+
+        document.querySelectorAll("[data-settings-tab]").forEach((button) => {
+          const active = button.dataset.settingsTab === settingsTab;
+          button.setAttribute("aria-selected", String(active));
+          button.classList.toggle("bg-white/80", active);
+          button.classList.toggle("shadow-sm", active);
+          button.classList.toggle("text-primary", active);
+          button.classList.toggle("dark:bg-zinc-800", active);
+          button.classList.toggle("text-zinc-500", !active);
+          button.classList.toggle("dark:text-zinc-400", !active);
+        });
+      }
+
+      function showView(view) {
+        document
+          .getElementById("menu-view")
+          .classList.toggle("hidden", view !== "menu");
+        document
+          .getElementById("settings-toggle")
+          .classList.toggle("hidden", view !== "menu");
+        document
+          .getElementById("settings-view")
+          .classList.toggle("hidden", view !== "settings");
+        document
+          .getElementById("loading-view")
+          .classList.toggle("hidden", view !== "loading");
+        document
+          .getElementById("result-view")
+          .classList.toggle("hidden", view !== "result");
+        document
+          .getElementById("image-prompt-view")
+          .classList.toggle("hidden", view !== "image-prompt");
+        document
+          .getElementById("image-loading-view")
+          .classList.toggle("hidden", view !== "image-loading");
+        document
+          .getElementById("image-result-view")
+          .classList.toggle("hidden", view !== "image-result");
+
+        if (view === "settings") {
+          selectSettingsTab(settingsTab);
+          if (aiSettings) renderModelSettings();
+          else void loadAiSettings();
+        }
+        document.querySelector(".flex-1").scrollTo(0, 0);
+      }
+
+      // ── Image Generation ────────────────────────────────────────────────────
+
+      let currentImageMode = "image";
+      let currentGeneratedBase64 = null;
+
+      let DIAGRAM_SYSTEM_PROMPT = `Create a clear, accurate visual diagram from the supplied text.
+
+ROLE
+You are a precise visual communication assistant. Turn the source text into a diagram that helps someone understand the relationships, sequence, structure, or hierarchy at a glance.
+
+OBJECTIVE
+Make the main idea understandable in a few seconds. Identify the important concepts, group related information, and show meaningful connections with readable labels and arrows.
+
+PROCESS
+Before drawing:
+1. Identify the subject, key concepts, steps, and relationships explicitly present in the source text.
+2. Preserve the source text’s facts, order, names, quantities, and distinctions.
+3. Choose the diagram structure that best fits the content: flowchart, timeline, hierarchy, mind map, comparison, or labeled overview.
+4. Generate one coherent visual composition.
+
+VISUAL STYLE
+Use a clean, professional, high-contrast layout with a clear title, consistent spacing, simple shapes, and legible typography. Use restrained color only when it improves grouping or comprehension. Keep the diagram suitable for sharing or printing.
+
+ACCURACY RULES
+Never invent facts, examples, steps, relationships, labels, or conclusions. Do not omit important source details. Do not add a separate explanation panel; integrate the necessary context directly into the diagram. If the source text does not contain enough information for a connection, leave the connection out. Keep all text readable and avoid decorative clutter.`;
+
+      async function showImagePromptView(mode) {
+        return handleGenerateImage(mode);
+      }
+
+      async function handleGenerateImage(mode) {
+        if (mode) currentImageMode = mode;
+
+        await loadAiSettings();
+        const imageRequest = getSelectedImageRequest();
+        if (!imageRequest) {
+          showToast(t("connect_image_provider"), "error");
+          showView("settings");
+          return;
+        }
+        if (providerNeedsKey(imageRequest.provider) && !imageRequest.api_key) {
+          showToast(t("connect_image_provider"), "error");
+          showView("settings");
+          return;
+        }
+
+        const contextText = capturedText || "";
+
+        if (!contextText.trim()) {
+          showToast("Select text and use your app shortcut before generating an image or diagram.", "error");
+          return;
+        }
+
+        let finalPrompt = "";
+        if (currentImageMode === "diagram") {
+          finalPrompt = contextText
+            ? `${DIAGRAM_SYSTEM_PROMPT}\n\nSOURCE TEXT / NOTES / CONTEXT:\n${contextText}`
+            : DIAGRAM_SYSTEM_PROMPT;
+        } else {
+          finalPrompt = contextText;
+          if (!finalPrompt) {
+            const shortcut = localStorage.getItem("app_shortcut") || "Ctrl+Shift+U";
+            showToast(
+              t("select_text_first").replace("{shortcut}", shortcut),
+              "error"
+            );
+            return;
+          }
+        }
+
+        showView("image-loading");
+        const version = selectionVersion;
+
+        try {
+          const base64 = await invoke("generate_image", {
+            prompt: finalPrompt,
+            apiKey: imageRequest.api_key,
+            model: imageRequest.model,
+            provider: imageRequest.provider,
+            baseUrl: imageRequest.base_url,
+          });
+          currentGeneratedBase64 = base64;
+          if (version !== selectionVersion) { currentGeneratedBase64 = null; return; }
+          const src = getGeneratedImageDataUrl();
+          document.getElementById("generated-image-preview").src = src;
+          showView("image-result");
+        } catch (error) {
+          showToast(
+            "Generation Error: " + extractErrorMessage(error, "Generation failed"),
+            "error",
+            6000,
+          );
+          showView("menu");
+        }
+      }
+
+      async function pasteGeneratedImage() {
+        await copyImageResult();
+      }
+
+      async function copyGeneratedImage() {
+        if (!currentGeneratedBase64) return;
+        try {
+          const dataUrl = getGeneratedImageDataUrl();
+          const mimeType = dataUrl.match(/^data:(image\/[^;]+);/)?.[1] || "image/png";
+          const extension = mimeType === "image/jpeg" ? "jpg" : mimeType.split("/")[1] || "png";
+          const a = document.createElement("a");
+          a.href = dataUrl;
+          a.download = `ghost-writer-generated.${extension}`;
+          a.click();
+          showToast("Image saved!", "success");
+        } catch (e) {
+          showToast("Could not save image", "error");
+        }
+      }
+
+      function getGeneratedImageDataUrl() {
+        if (!currentGeneratedBase64) return "";
+        if (currentGeneratedBase64.startsWith("data:image/")) {
+          return currentGeneratedBase64;
+        }
+        const mimeType = currentGeneratedBase64.startsWith("/9j/")
+          ? "image/jpeg"
+          : currentGeneratedBase64.startsWith("UklGR")
+            ? "image/webp"
+            : "image/png";
+        return `data:${mimeType};base64,${currentGeneratedBase64}`;
+      }
+
+      async function generatedImageAsPngBase64() {
+        const dataUrl = getGeneratedImageDataUrl();
+        if (dataUrl.startsWith("data:image/png;")) {
+          return dataUrl.split(",")[1];
+        }
+        const image = new Image();
+        const loaded = new Promise((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = () => reject(new Error("Could not decode generated image"));
+        });
+        image.src = dataUrl;
+        await loaded;
+        const canvas = document.createElement("canvas");
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        return canvas.toDataURL("image/png").split(",")[1];
+      }
+
+      function createDefaultAiSettings() {
+        return {
+          version: 2,
+          selectedProvider: "openai",
+          selectedModel: "gpt-4.1-mini",
+          selectedEndpointId: "",
+          imageProvider: "openai",
+          imageModel: "gpt-image-2",
+          imageEndpointId: "",
+          providerKeys: {},
+          providerConfig: {
+            openrouter: { modelId: "", imageModelId: "" },
+            lmstudio: {
+              baseUrl: "http://localhost:1234/v1",
+              modelId: "",
+            },
+            mlx: {
+              baseUrl: "http://127.0.0.1:8080/v1",
+              modelId: "",
+            },
+            ollama: {
+              baseUrl: "http://localhost:11434/v1",
+              modelId: "",
+            },
+          },
+          customEndpoints: [],
+          addingProviders: ["openai"],
+        };
+      }
+
+      function normalizeAiSettings(value) {
+        const defaults = createDefaultAiSettings();
+        const incoming = value && typeof value === "object" ? value : {};
+        const providerConfig = {
+          ...defaults.providerConfig,
+          ...(incoming.providerConfig || {}),
+        };
+        Object.keys(defaults.providerConfig).forEach((id) => {
+          providerConfig[id] = {
+            ...defaults.providerConfig[id],
+            ...(providerConfig[id] || {}),
+          };
+        });
+        return {
+          ...defaults,
+          ...incoming,
+          imageModel: IMAGE_MODEL_CATALOG.some(
+            (model) => model.id === incoming.imageModel,
+          )
+            ? incoming.imageModel
+            : defaults.imageModel,
+          imageProvider: incoming.imageProvider || defaults.imageProvider,
+          imageEndpointId: incoming.imageEndpointId || "",
+          providerKeys:
+            incoming.providerKeys && typeof incoming.providerKeys === "object"
+              ? incoming.providerKeys
+              : {},
+          providerConfig,
+          customEndpoints: Array.isArray(incoming.customEndpoints)
+            ? incoming.customEndpoints
+                .filter((endpoint) => endpoint && endpoint.id)
+                .map((endpoint) => ({
+                  id: String(endpoint.id),
+                  name: String(endpoint.name || ""),
+                  baseUrl: String(endpoint.baseUrl || endpoint.baseURL || ""),
+                  modelId: String(endpoint.modelId || ""),
+                  imageModelId: String(endpoint.imageModelId || ""),
+                  contextLimit: Number(endpoint.contextLimit) || 128000,
+                }))
+            : [],
+          addingProviders: Array.isArray(incoming.addingProviders)
+            ? incoming.addingProviders
+            : defaults.addingProviders,
+        };
+      }
+
+      async function decryptStoredValue(storageKey) {
+        const encrypted = localStorage.getItem(storageKey);
+        if (!encrypted) return null;
+        try {
+          return await invoke("decrypt_data", { encryptedData: encrypted });
+        } catch (error) {
+          console.error("Stored settings decryption failed:", error);
+          return null;
+        }
+      }
+
+      async function persistAiSettings() {
+        try {
+          const encrypted = await invoke("encrypt_data", {
+            data: JSON.stringify(aiSettings),
+          });
+          if (!encrypted) throw new Error("Could not encrypt settings");
+          localStorage.setItem(AI_SETTINGS_STORAGE_KEY, encrypted);
+        } catch (error) {
+          showToast(
+            "Could not save model settings: " + extractErrorMessage(error),
+            "error",
+          );
+          throw error;
+        }
+      }
+
+      async function loadAiSettings() {
+        if (aiSettingsLoaded) {
+          renderModelSettings();
+          return aiSettings;
+        }
+
+        let stored = await decryptStoredValue(AI_SETTINGS_STORAGE_KEY);
+        let migratedLegacySettings = false;
+        if (!stored) {
+          stored = await decryptStoredValue(LEGACY_AI_SETTINGS_STORAGE_KEY);
+          migratedLegacySettings = Boolean(stored);
+        }
+        let migratedLegacyKey = null;
+        if (stored) {
+          try {
+            aiSettings = normalizeAiSettings(JSON.parse(stored));
+          } catch (error) {
+            console.error("Model settings parsing failed:", error);
+            migratedLegacySettings = false;
+          }
+        }
+        if (!aiSettings) {
+          aiSettings = createDefaultAiSettings();
+          migratedLegacyKey = await decryptStoredValue(LEGACY_API_KEY_STORAGE_KEY);
+          if (migratedLegacyKey) {
+            aiSettings.providerKeys.openai = migratedLegacyKey;
+          }
+          aiSettings = normalizeAiSettings(aiSettings);
+        }
+
+        aiSettingsLoaded = true;
+        renderModelSettings();
+        if (migratedLegacySettings || migratedLegacyKey) {
+          try {
+            await persistAiSettings();
+            if (migratedLegacySettings) {
+              localStorage.removeItem(LEGACY_AI_SETTINGS_STORAGE_KEY);
+            }
+            if (migratedLegacyKey) {
+              localStorage.removeItem(LEGACY_API_KEY_STORAGE_KEY);
+            }
+          } catch (_) {}
+        }
+        return aiSettings;
+      }
+
+      function providerById(id) {
+        return PROVIDER_CATALOG.find((provider) => provider.id === id) || null;
+      }
+
+      function providerIcon(id) {
+        const provider = providerById(id);
+        return provider?.icon || (id === "custom-endpoint" ? "link" : "hub");
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function maskApiKey(key) {
+        if (!key) return "";
+        if (key.length <= 8) return "•".repeat(key.length);
+        return `${key.slice(0, 4)}${"•".repeat(8)}${key.slice(-4)}`;
+      }
+
+      function getProviderConfig(id) {
+        if (!aiSettings.providerConfig[id]) {
+          const provider = providerById(id);
+          aiSettings.providerConfig[id] = {
+            ...(provider?.baseUrl ? { baseUrl: provider.baseUrl } : {}),
+            modelId: "",
+          };
+        }
+        return aiSettings.providerConfig[id];
+      }
+
+      function providerNeedsKey(id) {
+        if (id === "openai-compatible") return false;
+        return providerById(id)?.type !== "local";
+      }
+
+      function isProviderConfigured(id) {
+        if (id === "openrouter") {
+          const config = getProviderConfig(id);
+          return Boolean(aiSettings.providerKeys[id] && config.modelId?.trim());
+        }
+        const provider = providerById(id);
+        if (!provider) return false;
+        if (provider.type === "local") {
+          const config = getProviderConfig(id);
+          return Boolean(config.baseUrl?.trim() && config.modelId?.trim());
+        }
+        return Boolean(aiSettings.providerKeys[id]);
+      }
+
+      function isCustomEndpointConfigured(endpoint) {
+        return Boolean(endpoint?.baseUrl?.trim() && endpoint?.modelId?.trim());
+      }
+
+      function configuredModelOptions() {
+        if (!aiSettings) return [];
+        const options = [];
+        PROVIDER_CATALOG.forEach((provider) => {
+          if (!isProviderConfigured(provider.id)) return;
+          const config = getProviderConfig(provider.id);
+          if (provider.id === "openrouter") {
+            options.push({
+              value: `openrouter::::${config.modelId.trim()}`,
+              provider: provider.id,
+              endpointId: "",
+              modelId: config.modelId.trim(),
+              label: config.modelId.trim(),
+              hint: "Configurable",
+            });
+            return;
+          }
+          if (provider.type === "local") {
+            options.push({
+              value: `${provider.id}::::${config.modelId.trim()}`,
+              provider: provider.id,
+              endpointId: "",
+              modelId: config.modelId.trim(),
+              label: config.modelId.trim(),
+              hint: "Local",
+            });
+            return;
+          }
+          provider.models.forEach((model) => {
+            options.push({
+              value: `${provider.id}::::${model[0]}`,
+              provider: provider.id,
+              endpointId: "",
+              modelId: model[0],
+              label: model[1],
+              hint: model[2],
+            });
+          });
+        });
+        aiSettings.customEndpoints.forEach((endpoint) => {
+          if (!isCustomEndpointConfigured(endpoint)) return;
+          options.push({
+            value: `custom-endpoint::${endpoint.id}::${endpoint.modelId.trim()}`,
+            provider: "custom-endpoint",
+            endpointId: endpoint.id,
+            modelId: endpoint.modelId.trim(),
+            label: endpoint.modelId.trim(),
+            hint: endpoint.name || "Custom endpoint",
+          });
+        });
+        return options;
+      }
+
+      function configuredImageModelOptions() {
+        if (!aiSettings) return [];
+        const options = [];
+        PROVIDER_CATALOG.forEach((provider) => {
+          if (provider.type !== "cloud" || !aiSettings.providerKeys[provider.id]) return;
+          const catalogModels = IMAGE_MODEL_CATALOG.filter(
+            (model) => model.provider === provider.id,
+          );
+          const config = getProviderConfig(provider.id);
+          if (provider.id === "openrouter" && config.imageModelId?.trim()) {
+            options.push({
+              value: `openrouter::::${config.imageModelId.trim()}`,
+              provider: "openrouter",
+              endpointId: "",
+              modelId: config.imageModelId.trim(),
+              label: config.imageModelId.trim(),
+              hint: "Custom",
+            });
+          } else {
+            catalogModels.forEach((model) => {
+              options.push({
+                value: `${model.provider}::::${model.id}`,
+                provider: model.provider,
+                endpointId: "",
+                modelId: model.id,
+                label: model.label,
+                hint: model.hint,
+              });
+            });
+          }
+        });
+        aiSettings.customEndpoints.forEach((endpoint) => {
+          if (!endpoint.baseUrl?.trim() || !endpoint.imageModelId?.trim()) return;
+          options.push({
+            value: `custom-endpoint::${endpoint.id}::${endpoint.imageModelId.trim()}`,
+            provider: "custom-endpoint",
+            endpointId: endpoint.id,
+            modelId: endpoint.imageModelId.trim(),
+            label: endpoint.imageModelId.trim(),
+            hint: endpoint.name || "Custom endpoint",
+          });
+        });
+        return options;
+      }
+
+      function selectedModelOption() {
+        const options = configuredModelOptions();
+        const exact = options.find(
+          (option) =>
+            option.provider === aiSettings.selectedProvider &&
+            option.endpointId === (aiSettings.selectedEndpointId || "") &&
+            option.modelId === aiSettings.selectedModel,
+        );
+        return exact || options[0] || null;
+      }
+
+      function selectedImageModelOption() {
+        const options = configuredImageModelOptions();
+        const exact = options.find(
+          (option) =>
+            option.provider === aiSettings.imageProvider &&
+            option.endpointId === (aiSettings.imageEndpointId || "") &&
+            option.modelId === aiSettings.imageModel,
+        );
+        if (exact) return exact;
+        return (
+          options[0] ||
+          IMAGE_MODEL_CATALOG.find(
+            (model) =>
+              model.provider === aiSettings.imageProvider &&
+              model.id === aiSettings.imageModel,
+          ) ||
+          null
+        );
+      }
+
+      function renderModelSettings() {
+        const root = document.getElementById("model-settings-root");
+        if (!root) return;
+        if (!aiSettings) {
+          root.innerHTML = '<div class="py-8 text-center text-xs text-zinc-500">Loading models…</div>';
+          return;
+        }
+
+        const configuredProviders = PROVIDER_CATALOG.filter((provider) =>
+          isProviderConfigured(provider.id),
+        );
+        const visibleProviderIds = new Set([
+          ...configuredProviders.map((provider) => provider.id),
+          ...(aiSettings.addingProviders || []),
+        ]);
+        const visibleProviders = PROVIDER_CATALOG.filter((provider) =>
+          visibleProviderIds.has(provider.id),
+        );
+        const addableProviders = PROVIDER_CATALOG.filter(
+          (provider) => !visibleProviderIds.has(provider.id),
+        );
+        const options = configuredModelOptions();
+        const selected = selectedModelOption();
+        const imageOptions = configuredImageModelOptions();
+        const selectedImage = selectedImageModelOption();
+
+        const groupedOptions = configuredProviders
+          .map((provider) => {
+            const providerOptions = options.filter(
+              (option) => option.provider === provider.id,
+            );
+            if (!providerOptions.length) return "";
+            return `<optgroup label="${escapeHtml(provider.label)}">${providerOptions
+              .map(
+                (option) =>
+                  `<option value="${escapeHtml(option.value)}" ${
+                    selected?.value === option.value ? "selected" : ""
+                  }>${escapeHtml(option.label)} · ${escapeHtml(option.hint)}</option>`,
+              )
+              .join("")}</optgroup>`;
+          })
+          .join("");
+        const customOptions = options.filter(
+          (option) => option.provider === "custom-endpoint",
+        );
+        const customGroup = customOptions.length
+          ? `<optgroup label="Custom endpoints">${customOptions
+              .map(
+                (option) =>
+                  `<option value="${escapeHtml(option.value)}" ${
+                    selected?.value === option.value ? "selected" : ""
+                  }>${escapeHtml(option.label)} · ${escapeHtml(option.hint)}</option>`,
+              )
+              .join("")}</optgroup>`
+          : "";
+        const imageGroups = PROVIDER_CATALOG
+          .filter((provider) => provider.type === "cloud")
+          .map((provider) => {
+            const providerOptions = imageOptions.filter(
+              (option) => option.provider === provider.id,
+            );
+            if (!providerOptions.length) return "";
+            return `<optgroup label="${escapeHtml(provider.label)}">${providerOptions
+              .map(
+                (option) =>
+                  `<option value="${escapeHtml(option.value)}" ${
+                    selectedImage?.value === option.value ? "selected" : ""
+                  }>${escapeHtml(option.label)} · ${escapeHtml(option.hint)}</option>`,
+              )
+              .join("")}</optgroup>`;
+          })
+          .join("");
+        const imageCustomOptions = imageOptions.filter(
+          (option) => option.provider === "custom-endpoint",
+        );
+        const imageCustomGroup = imageCustomOptions.length
+          ? `<optgroup label="Custom endpoints">${imageCustomOptions
+              .map(
+                (option) =>
+                  `<option value="${escapeHtml(option.value)}" ${
+                    selectedImage?.value === option.value ? "selected" : ""
+                  }>${escapeHtml(option.label)} · ${escapeHtml(option.hint)}</option>`,
+              )
+              .join("")}</optgroup>`
+          : "";
+
+        root.innerHTML = `
+          <div class="space-y-2">
+            <div class="flex items-center justify-between px-1">
+              <div>
+                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">${t("models")}</p>
+                <p class="mt-0.5 text-[10px] text-zinc-500 dark:text-zinc-500/90">${t("models_help")}</p>
+              </div>
+            </div>
+            <div class="rounded-2xl border border-black/5 bg-black/5 p-3 dark:border-white/5 dark:bg-white/5">
+              <div class="mb-2 flex items-center gap-2">
+                <span class="material-icons-outlined text-[18px] text-primary">tune</span>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">${t("defaults")}</span>
+              </div>
+              <label class="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-500">${t("chat_model")}</label>
+              <select id="default-model-select" onchange="selectDefaultModel(this.value)" ${
+                options.length ? "" : "disabled"
+              } class="w-full rounded-xl border border-transparent bg-white/60 px-3 py-2 text-xs text-zinc-800 outline-none transition-all focus:border-primary/30 dark:bg-zinc-900/50 dark:text-zinc-200">
+                ${options.length ? groupedOptions + customGroup : `<option>${t("no_models")}</option>`}
+              </select>
+              <p class="mt-2 text-[10px] leading-relaxed text-zinc-500 dark:text-zinc-500">${t("default_model_help")}</p>
+              <label class="mb-1 mt-3 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-500">${t("image_model")}</label>
+              <select id="image-model-select" onchange="selectImageModel(this.value)" ${
+                imageOptions.length ? "" : "disabled"
+              } class="w-full rounded-xl border border-transparent bg-white/60 px-3 py-2 text-xs text-zinc-800 outline-none transition-all focus:border-primary/30 dark:bg-zinc-900/50 dark:text-zinc-200">
+                ${imageOptions.length ? imageGroups + imageCustomGroup : `<option>${t("no_image_models")}</option>`}
+              </select>
+              <p class="mt-2 text-[10px] leading-relaxed text-zinc-500 dark:text-zinc-500">${t("image_model_help")}</p>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <div class="flex items-center justify-between px-1">
+              <div>
+                <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">${t("providers")}</p>
+                <p class="mt-0.5 text-[10px] text-zinc-500 dark:text-zinc-500/90">${t("providers_help")}</p>
+              </div>
+              <div id="provider-menu-wrap" class="relative">
+                <button onclick="toggleProviderMenu(event)" class="flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-primary transition-all hover:bg-primary/20">
+                  <span class="material-icons-outlined text-[14px]">add</span>${t("add_provider")}
+                </button>
+                <div id="provider-menu" class="absolute right-0 top-9 z-30 hidden w-56 rounded-xl border border-zinc-200/80 bg-white/95 p-1.5 shadow-xl backdrop-blur-xl dark:border-zinc-700/70 dark:bg-zinc-900/95">
+                  ${renderProviderMenuGroup("cloud", addableProviders.filter((provider) => provider.type === "cloud"))}
+                  ${renderProviderMenuGroup("local_custom", addableProviders.filter((provider) => provider.type === "local"))}
+                  <button onclick="addCustomEndpoint()" class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-zinc-700 transition-colors hover:bg-primary/10 dark:text-zinc-200">
+                    <span class="material-icons-outlined text-[15px] text-primary">link</span><span>OpenAI Compatible</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            ${visibleProviders.length || aiSettings.customEndpoints.length ? `<div class="space-y-2">${visibleProviders
+              .map((provider) => renderProviderCard(provider))
+              .join("")}${aiSettings.customEndpoints.map(renderCustomEndpointCard).join("")}</div>` : `<div class="rounded-2xl border border-dashed border-zinc-300/70 bg-black/5 px-4 py-7 text-center dark:border-zinc-700/70 dark:bg-white/5"><p class="text-xs text-zinc-500">${t("no_providers")}</p><p class="mt-1 text-[10px] text-zinc-500/80">${t("no_providers_help")}</p></div>`}
+          </div>
+
+          <div class="rounded-2xl border border-primary/10 bg-primary/5 px-3 py-2.5">
+            <p class="flex items-center gap-2 text-[10px] leading-relaxed text-zinc-500 dark:text-zinc-400"><span class="material-icons-outlined text-[15px] text-primary">lock</span>${t("models_local_help")}</p>
+          </div>
+        `;
+      }
+
+      function renderProviderMenuGroup(group, providers) {
+        if (!providers.length) return "";
+        const label = group === "cloud" ? t("cloud") : t("local_custom");
+        return `<p class="px-2.5 pb-1 pt-2 text-[9px] font-bold uppercase tracking-widest text-zinc-400">${label}</p>${providers
+          .map(
+            (provider) =>
+              `<button onclick="addProvider('${provider.id}')" class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-zinc-700 transition-colors hover:bg-primary/10 dark:text-zinc-200"><span class="material-icons-outlined text-[15px] text-zinc-500">${providerIcon(provider.id)}</span><span>${escapeHtml(provider.label)}</span></button>`,
+          )
+          .join("")}`;
+      }
+
+      function renderProviderCard(provider) {
+        if (provider.type === "local" || provider.id === "openrouter") {
+          return renderLocalProviderCard(provider);
+        }
+        const key = aiSettings.providerKeys[provider.id] || "";
+        const editing = !key || window.editingProviderKeys?.has(provider.id);
+        return `<div class="rounded-2xl border border-black/5 bg-black/5 p-3 dark:border-white/5 dark:bg-white/5">
+          <div class="flex items-center gap-2">
+            <span class="material-icons-outlined text-[18px] text-primary">${providerIcon(provider.id)}</span>
+            <span class="text-xs font-semibold text-zinc-800 dark:text-zinc-200">${escapeHtml(provider.label)}</span>
+            ${key ? `<span class="ml-1 inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-green-600 dark:text-green-400"><span class="material-icons-outlined text-[11px]">check_circle</span>${t("connected")}</span>` : ""}
+            <a href="${escapeHtml(provider.docs)}" target="_blank" rel="noreferrer" class="ml-auto inline-flex items-center gap-0.5 text-[10px] text-zinc-500 transition-colors hover:text-primary">${provider.type === "cloud" ? t("get_key") : t("docs")}<span class="material-icons-outlined text-[12px]">open_in_new</span></a>
+            <button onclick="removeProvider('${provider.id}')" title="${t("remove_provider")}" class="ml-1 rounded-lg p-1 text-zinc-400 transition-colors hover:bg-red-500/10 hover:text-red-500"><span class="material-icons-outlined text-[14px]">close</span></button>
+          </div>
+          ${editing ? `<div class="mt-2.5 flex gap-1.5"><div class="relative min-w-0 flex-1"><input id="key-${provider.id}" type="password" autocomplete="off" spellcheck="false" placeholder="${escapeHtml(provider.keyPrefix ? provider.keyPrefix + "…" : t("paste_api_key"))}" class="w-full rounded-xl border border-transparent bg-white/60 px-3 py-2 pr-8 font-mono text-[11px] text-zinc-800 outline-none transition-all placeholder:text-zinc-400 focus:border-primary/30 dark:bg-zinc-900/50 dark:text-zinc-200" onkeydown="if(event.key==='Enter') saveProviderKey('${provider.id}')" /><button onclick="toggleKeyVisibility('key-${provider.id}', this)" class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-primary" title="${t("show_key")}"><span class="material-icons-outlined text-[14px]">visibility</span></button></div><button onclick="saveProviderKey('${provider.id}')" class="rounded-xl bg-primary px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-white transition-all hover:bg-primary/90">${t("save")}</button></div>${key ? `<button onclick="cancelProviderKeyEdit('${provider.id}')" class="mt-1.5 text-[10px] text-zinc-500 hover:text-primary">${t("cancel")}</button>` : ""}` : `<div class="mt-2.5 flex items-center gap-1.5"><code class="min-w-0 flex-1 truncate rounded-xl bg-white/50 px-3 py-2 font-mono text-[11px] text-zinc-500 dark:bg-zinc-900/50">${escapeHtml(maskApiKey(key))}</code><button onclick="editProviderKey('${provider.id}')" title="${t("replace")}" class="rounded-lg p-1.5 text-zinc-400 hover:bg-primary/10 hover:text-primary"><span class="material-icons-outlined text-[14px]">edit</span></button><button onclick="clearProviderKey('${provider.id}')" title="${t("remove_key")}" class="rounded-lg p-1.5 text-zinc-400 hover:bg-red-500/10 hover:text-red-500"><span class="material-icons-outlined text-[14px]">close</span></button></div>`}
+        </div>`;
+      }
+
+      function renderLocalProviderCard(provider) {
+        const config = getProviderConfig(provider.id);
+        const isOpenRouter = provider.id === "openrouter";
+        const key = aiSettings.providerKeys[provider.id] || "";
+        const configured = isProviderConfigured(provider.id);
+        return `<div class="rounded-2xl border border-black/5 bg-black/5 p-3 dark:border-white/5 dark:bg-white/5">
+          <div class="flex items-center gap-2">
+            <span class="material-icons-outlined text-[18px] text-primary">${providerIcon(provider.id)}</span>
+            <span class="text-xs font-semibold text-zinc-800 dark:text-zinc-200">${escapeHtml(provider.label)}</span>
+            ${configured ? `<span class="ml-1 inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-green-600 dark:text-green-400"><span class="material-icons-outlined text-[11px]">check_circle</span>${t("connected")}</span>` : ""}
+            <a href="${escapeHtml(provider.docs)}" target="_blank" rel="noreferrer" class="ml-auto inline-flex items-center gap-0.5 text-[10px] text-zinc-500 transition-colors hover:text-primary">${isOpenRouter ? t("get_key") : t("docs")}<span class="material-icons-outlined text-[12px]">open_in_new</span></a>
+            <button onclick="removeProvider('${provider.id}')" title="${t("remove_provider")}" class="ml-1 rounded-lg p-1 text-zinc-400 transition-colors hover:bg-red-500/10 hover:text-red-500"><span class="material-icons-outlined text-[14px]">close</span></button>
+          </div>
+          <p class="mt-1.5 text-[10px] leading-relaxed text-zinc-500 dark:text-zinc-500/90">${escapeHtml(provider.description || (isOpenRouter ? t("openrouter_help") : ""))}</p>
+          <div class="mt-2.5 space-y-2">
+            ${isOpenRouter ? "" : `<label class="block"><span class="mb-1 block text-[9px] font-bold uppercase tracking-wider text-zinc-500">${t("base_url")}</span><div class="flex gap-1.5"><input value="${escapeHtml(config.baseUrl || provider.baseUrl || "")}" onblur="saveProviderConfigField('${provider.id}', 'baseUrl', this.value)" spellcheck="false" placeholder="${escapeHtml(provider.baseUrl || "https://api.example.com/v1")}" class="min-w-0 flex-1 rounded-xl border border-transparent bg-white/60 px-3 py-2 font-mono text-[11px] text-zinc-800 outline-none transition-all placeholder:text-zinc-400 focus:border-primary/30 dark:bg-zinc-900/50 dark:text-zinc-200" /><button onclick="testProviderUrl(this, '${provider.id}')" class="rounded-xl border border-zinc-300/70 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-zinc-500 transition-colors hover:border-primary/30 hover:text-primary dark:border-zinc-700">${t("test")}</button></div><span class="provider-test-status mt-1 block text-[10px] text-zinc-500"></span></label>`}
+            <label class="block"><span class="mb-1 block text-[9px] font-bold uppercase tracking-wider text-zinc-500">${t("model_id")}</span><input value="${escapeHtml(config.modelId || "")}" onblur="saveProviderConfigField('${provider.id}', 'modelId', this.value)" spellcheck="false" placeholder="${escapeHtml(provider.modelPlaceholder || (isOpenRouter ? "anthropic/claude-sonnet-4-6" : "Model id"))}" class="w-full rounded-xl border border-transparent bg-white/60 px-3 py-2 font-mono text-[11px] text-zinc-800 outline-none transition-all placeholder:text-zinc-400 focus:border-primary/30 dark:bg-zinc-900/50 dark:text-zinc-200" /></label>
+            ${isOpenRouter ? `<label class="block"><span class="mb-1 block text-[9px] font-bold uppercase tracking-wider text-zinc-500">${t("image_model_id")}</span><input value="${escapeHtml(config.imageModelId || "")}" onblur="saveProviderConfigField('${provider.id}', 'imageModelId', this.value)" spellcheck="false" placeholder="bytedance-seed/seedream-4.5" class="w-full rounded-xl border border-transparent bg-white/60 px-3 py-2 font-mono text-[11px] text-zinc-800 outline-none transition-all placeholder:text-zinc-400 focus:border-primary/30 dark:bg-zinc-900/50 dark:text-zinc-200" /></label>` : ""}
+            ${isOpenRouter ? renderProviderKeyField(provider, key) : ""}
+          </div>
+        </div>`;
+      }
+
+      function renderProviderKeyField(provider, key) {
+        const editing = !key || window.editingProviderKeys?.has(provider.id);
+        return `<label class="block"><span class="mb-1 block text-[9px] font-bold uppercase tracking-wider text-zinc-500">${t("api_key")}</span>${editing ? `<div class="flex gap-1.5"><div class="relative min-w-0 flex-1"><input id="key-${provider.id}" type="password" autocomplete="off" spellcheck="false" placeholder="${escapeHtml(provider.keyPrefix + "…")}" class="w-full rounded-xl border border-transparent bg-white/60 px-3 py-2 pr-8 font-mono text-[11px] text-zinc-800 outline-none transition-all placeholder:text-zinc-400 focus:border-primary/30 dark:bg-zinc-900/50 dark:text-zinc-200" onkeydown="if(event.key==='Enter') saveProviderKey('${provider.id}')" /><button onclick="toggleKeyVisibility('key-${provider.id}', this)" class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-primary"><span class="material-icons-outlined text-[14px]">visibility</span></button></div><button onclick="saveProviderKey('${provider.id}')" class="rounded-xl bg-primary px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-white">${t("save")}</button></div>${key ? `<button onclick="cancelProviderKeyEdit('${provider.id}')" class="mt-1.5 text-[10px] text-zinc-500 hover:text-primary">${t("cancel")}</button>` : ""}` : `<div class="flex items-center gap-1.5"><code class="min-w-0 flex-1 truncate rounded-xl bg-white/50 px-3 py-2 font-mono text-[11px] text-zinc-500 dark:bg-zinc-900/50">${escapeHtml(maskApiKey(key))}</code><button onclick="editProviderKey('${provider.id}')" class="rounded-lg p-1.5 text-zinc-400 hover:bg-primary/10 hover:text-primary"><span class="material-icons-outlined text-[14px]">edit</span></button><button onclick="clearProviderKey('${provider.id}')" class="rounded-lg p-1.5 text-zinc-400 hover:bg-red-500/10 hover:text-red-500"><span class="material-icons-outlined text-[14px]">close</span></button></div>`}</label>`;
+      }
+
+      const expandedCustomEndpoints = new Set();
+
+      function renderCustomEndpointCard(endpoint) {
+        const expanded = expandedCustomEndpoints.has(endpoint.id) || !endpoint.baseUrl.trim();
+        const keyName = `custom:${endpoint.id}`;
+        const key = aiSettings.providerKeys[keyName] || "";
+        const configured = isCustomEndpointConfigured(endpoint);
+        return `<div class="overflow-hidden rounded-2xl border border-black/5 bg-black/5 dark:border-white/5 dark:bg-white/5">
+          <div class="flex items-center gap-2 px-3 py-2.5">
+            <button onclick="toggleCustomEndpoint('${endpoint.id}')" class="flex min-w-0 flex-1 items-center gap-2 text-left"><span class="material-icons-outlined text-[15px] text-zinc-500 transition-transform ${expanded ? "rotate-0" : "-rotate-90"}">expand_more</span><span class="material-icons-outlined text-[18px] text-primary">link</span><span class="truncate text-xs font-semibold text-zinc-800 dark:text-zinc-200">${escapeHtml(endpoint.name || "OpenAI Compatible")}</span>${endpoint.modelId?.trim() ? `<code class="min-w-0 truncate font-mono text-[10px] text-zinc-500">${escapeHtml(endpoint.modelId)}</code>` : ""}${configured ? `<span class="ml-1 rounded-full bg-green-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-green-600 dark:text-green-400">${t("connected")}</span>` : ""}</button>
+            <button onclick="removeCustomEndpoint('${endpoint.id}')" title="${t("remove_provider")}" class="rounded-lg p-1 text-zinc-400 transition-colors hover:bg-red-500/10 hover:text-red-500"><span class="material-icons-outlined text-[14px]">close</span></button>
+          </div>
+          ${expanded ? `<div class="space-y-2.5 border-t border-black/5 px-3 py-3 dark:border-white/5"><label class="block"><span class="mb-1 block text-[9px] font-bold uppercase tracking-wider text-zinc-500">${t("name")}</span><input value="${escapeHtml(endpoint.name)}" onblur="saveCustomEndpointField('${endpoint.id}', 'name', this.value)" placeholder="My endpoint" spellcheck="false" class="w-full rounded-xl border border-transparent bg-white/60 px-3 py-2 text-[11px] text-zinc-800 outline-none transition-all placeholder:text-zinc-400 focus:border-primary/30 dark:bg-zinc-900/50 dark:text-zinc-200" /></label><label class="block"><span class="mb-1 block text-[9px] font-bold uppercase tracking-wider text-zinc-500">${t("base_url")}</span><div class="flex gap-1.5"><input value="${escapeHtml(endpoint.baseUrl)}" onblur="saveCustomEndpointField('${endpoint.id}', 'baseUrl', this.value)" placeholder="https://api.example.com/v1" spellcheck="false" class="min-w-0 flex-1 rounded-xl border border-transparent bg-white/60 px-3 py-2 font-mono text-[11px] text-zinc-800 outline-none transition-all placeholder:text-zinc-400 focus:border-primary/30 dark:bg-zinc-900/50 dark:text-zinc-200" /><button onclick="testCustomEndpoint(this, '${endpoint.id}')" class="rounded-xl border border-zinc-300/70 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-zinc-500 transition-colors hover:border-primary/30 hover:text-primary dark:border-zinc-700">${t("test")}</button></div><span class="provider-test-status mt-1 block text-[10px] text-zinc-500"></span></label><label class="block"><span class="mb-1 block text-[9px] font-bold uppercase tracking-wider text-zinc-500">${t("model_id")}</span><input value="${escapeHtml(endpoint.modelId)}" onblur="saveCustomEndpointField('${endpoint.id}', 'modelId', this.value)" placeholder="gpt-4o, qwen3-max, glm-4.6" spellcheck="false" class="w-full rounded-xl border border-transparent bg-white/60 px-3 py-2 font-mono text-[11px] text-zinc-800 outline-none transition-all placeholder:text-zinc-400 focus:border-primary/30 dark:bg-zinc-900/50 dark:text-zinc-200" /></label><label class="block"><span class="mb-1 block text-[9px] font-bold uppercase tracking-wider text-zinc-500">${t("image_model_id")}</span><input value="${escapeHtml(endpoint.imageModelId || "")}" onblur="saveCustomEndpointField('${endpoint.id}', 'imageModelId', this.value)" placeholder="Image model ID (optional)" spellcheck="false" class="w-full rounded-xl border border-transparent bg-white/60 px-3 py-2 font-mono text-[11px] text-zinc-800 outline-none transition-all placeholder:text-zinc-400 focus:border-primary/30 dark:bg-zinc-900/50 dark:text-zinc-200" /></label><label class="block"><span class="mb-1 block text-[9px] font-bold uppercase tracking-wider text-zinc-500">${t("context")}</span><div class="flex items-center gap-2"><input value="${escapeHtml(endpoint.contextLimit)}" onblur="saveCustomEndpointContext('${endpoint.id}', this.value)" placeholder="128000" spellcheck="false" class="w-32 rounded-xl border border-transparent bg-white/60 px-3 py-2 font-mono text-[11px] text-zinc-800 outline-none transition-all placeholder:text-zinc-400 focus:border-primary/30 dark:bg-zinc-900/50 dark:text-zinc-200" /><span class="text-[10px] text-zinc-500">${t("tokens")}</span></div></label><label class="block"><span class="mb-1 block text-[9px] font-bold uppercase tracking-wider text-zinc-500">${t("api_key_optional")}</span>${renderCustomEndpointKeyField(endpoint, key)}</label></div>` : ""}
+        </div>`;
+      }
+
+      function renderCustomEndpointKeyField(endpoint, key) {
+        const keyName = `custom:${endpoint.id}`;
+        const editing = !key || window.editingProviderKeys?.has(keyName);
+        return editing ? `<div class="flex gap-1.5"><div class="relative min-w-0 flex-1"><input id="key-${endpoint.id}" type="password" autocomplete="off" spellcheck="false" placeholder="${t("optional_key_hint")}" class="w-full rounded-xl border border-transparent bg-white/60 px-3 py-2 pr-8 font-mono text-[11px] text-zinc-800 outline-none transition-all placeholder:text-zinc-400 focus:border-primary/30 dark:bg-zinc-900/50 dark:text-zinc-200" onkeydown="if(event.key==='Enter') saveCustomEndpointKey('${endpoint.id}')" /><button onclick="toggleKeyVisibility('key-${endpoint.id}', this)" class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-primary"><span class="material-icons-outlined text-[14px]">visibility</span></button></div><button onclick="saveCustomEndpointKey('${endpoint.id}')" class="rounded-xl bg-primary px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-white">${t("save")}</button></div>${key ? `<button onclick="cancelProviderKeyEdit('${keyName}')" class="mt-1.5 text-[10px] text-zinc-500 hover:text-primary">${t("cancel")}</button>` : ""}` : `<div class="flex items-center gap-1.5"><code class="min-w-0 flex-1 truncate rounded-xl bg-white/50 px-3 py-2 font-mono text-[11px] text-zinc-500 dark:bg-zinc-900/50">${escapeHtml(maskApiKey(key))}</code><button onclick="editProviderKey('${keyName}')" class="rounded-lg p-1.5 text-zinc-400 hover:bg-primary/10 hover:text-primary"><span class="material-icons-outlined text-[14px]">edit</span></button><button onclick="clearCustomEndpointKey('${endpoint.id}')" class="rounded-lg p-1.5 text-zinc-400 hover:bg-red-500/10 hover:text-red-500"><span class="material-icons-outlined text-[14px]">close</span></button></div>`;
+      }
+
+      function ensureEditingProviderKeys() {
+        if (!window.editingProviderKeys) window.editingProviderKeys = new Set();
+        return window.editingProviderKeys;
+      }
+
+      function toggleProviderMenu(event) {
+        event.stopPropagation();
+        document.getElementById("provider-menu")?.classList.toggle("hidden");
+      }
+
+      function closeProviderMenu() {
+        document.getElementById("provider-menu")?.classList.add("hidden");
+      }
+
+      document.addEventListener("click", (event) => {
+        if (!event.target?.closest?.("#provider-menu-wrap")) {
+          closeProviderMenu();
+        }
+      });
+
+      function addProvider(id) {
+        aiSettings.addingProviders = Array.from(
+          new Set([...(aiSettings.addingProviders || []), id]),
+        );
+        closeProviderMenu();
+        renderModelSettings();
+        void persistAiSettings();
+      }
+
+      function addCustomEndpoint() {
+        const endpoint = {
+          id: crypto.randomUUID().slice(0, 8),
+          name: "",
+          baseUrl: "",
+          modelId: "",
+          imageModelId: "",
+          contextLimit: 128000,
+        };
+        aiSettings.customEndpoints.push(endpoint);
+        expandedCustomEndpoints.add(endpoint.id);
+        closeProviderMenu();
+        renderModelSettings();
+        void persistAiSettings();
+      }
+
+      async function saveProviderKey(id) {
+        const input = document.getElementById(`key-${id}`);
+        const key = input?.value.trim() || "";
+        const provider = providerById(id);
+        if (!key) {
+          showToast(t("enter_api_key"), "error");
+          return;
+        }
+        if (provider?.keyPrefix && !key.startsWith(provider.keyPrefix)) {
+          showToast(`${provider.label} keys start with "${provider.keyPrefix}".`, "error");
+          return;
+        }
+        aiSettings.providerKeys[id] = key;
+        ensureEditingProviderKeys().delete(id);
+        await persistAiSettings();
+        renderModelSettings();
+        showToast(`${provider?.label || id} ${t("connected_toast")}`, "success");
+      }
+
+      async function clearProviderKey(id) {
+        delete aiSettings.providerKeys[id];
+        ensureEditingProviderKeys().delete(id);
+        await persistAiSettings();
+        renderModelSettings();
+      }
+
+      function editProviderKey(id) {
+        ensureEditingProviderKeys().add(id);
+        renderModelSettings();
+      }
+
+      function cancelProviderKeyEdit(id) {
+        ensureEditingProviderKeys().delete(id);
+        renderModelSettings();
+      }
+
+      async function removeProvider(id) {
+        delete aiSettings.providerKeys[id];
+        ensureEditingProviderKeys().delete(id);
+        if (aiSettings.providerConfig[id]) {
+          const provider = providerById(id);
+          aiSettings.providerConfig[id] = {
+            ...(provider?.baseUrl ? { baseUrl: provider.baseUrl } : {}),
+            modelId: "",
+          };
+        }
+        aiSettings.addingProviders = (aiSettings.addingProviders || []).filter(
+          (providerId) => providerId !== id,
+        );
+        if (aiSettings.selectedProvider === id) {
+          aiSettings.selectedProvider = "openai";
+          aiSettings.selectedModel = "gpt-4.1-mini";
+          aiSettings.selectedEndpointId = "";
+        }
+        await persistAiSettings();
+        renderModelSettings();
+      }
+
+      async function saveProviderConfigField(id, field, value) {
+        getProviderConfig(id)[field] = value.trim();
+        await persistAiSettings();
+        renderModelSettings();
+      }
+
+      function toggleKeyVisibility(inputId, button) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        input.type = input.type === "password" ? "text" : "password";
+        const icon = button.querySelector(".material-icons-outlined");
+        if (icon) icon.textContent = input.type === "password" ? "visibility" : "visibility_off";
+      }
+
+      async function testProviderUrl(button, id) {
+        const input = button.parentElement?.querySelector("input");
+        const status = button.parentElement?.parentElement?.querySelector(".provider-test-status");
+        if (!input || !status || !input.value.trim()) return;
+        status.textContent = t("testing");
+        try {
+          const code = await invoke("lm_ping", { baseUrl: input.value.trim() });
+          status.textContent = Number(code) >= 200 && Number(code) < 500 ? t("reachable") : t("could_not_reach");
+          status.className = `provider-test-status mt-1 block text-[10px] ${Number(code) >= 200 && Number(code) < 500 ? "text-green-500" : "text-red-400"}`;
+        } catch (_) {
+          status.textContent = t("could_not_reach");
+          status.className = "provider-test-status mt-1 block text-[10px] text-red-400";
+        }
+      }
+
+      async function selectDefaultModel(value) {
+        const parts = value.split("::");
+        if (parts.length < 3) return;
+        const provider = parts[0];
+        const endpointId = provider === "custom-endpoint" ? parts[1] : "";
+        const modelId = parts.slice(provider === "custom-endpoint" ? 2 : 2).join("::");
+        aiSettings.selectedProvider = provider;
+        aiSettings.selectedEndpointId = endpointId;
+        aiSettings.selectedModel = modelId;
+        await persistAiSettings();
+        renderModelSettings();
+        showToast(`${t("model_selected")}: ${modelId}`, "success", 1800);
+      }
+
+      async function selectImageModel(value) {
+        const parts = value.split("::");
+        if (parts.length < 3) return;
+        const provider = parts[0];
+        const endpointId = provider === "custom-endpoint" ? parts[1] : "";
+        const modelId = parts.slice(2).join("::");
+        aiSettings.imageProvider = provider;
+        aiSettings.imageEndpointId = endpointId;
+        aiSettings.imageModel = modelId;
+        await persistAiSettings();
+        renderModelSettings();
+        showToast(`${t("image_model_selected")}: ${modelId}`, "success", 1800);
+      }
+
+      async function saveCustomEndpointField(id, field, value) {
+        const endpoint = aiSettings.customEndpoints.find((item) => item.id === id);
+        if (!endpoint) return;
+        endpoint[field] = value.trim();
+        await persistAiSettings();
+        renderModelSettings();
+      }
+
+      async function saveCustomEndpointContext(id, value) {
+        const endpoint = aiSettings.customEndpoints.find((item) => item.id === id);
+        if (!endpoint) return;
+        const contextLimit = Number.parseInt(value, 10);
+        endpoint.contextLimit = Number.isFinite(contextLimit) && contextLimit >= 1000 ? contextLimit : 128000;
+        await persistAiSettings();
+        renderModelSettings();
+      }
+
+      function toggleCustomEndpoint(id) {
+        if (expandedCustomEndpoints.has(id)) expandedCustomEndpoints.delete(id);
+        else expandedCustomEndpoints.add(id);
+        renderModelSettings();
+      }
+
+      async function removeCustomEndpoint(id) {
+        delete aiSettings.providerKeys[`custom:${id}`];
+        aiSettings.customEndpoints = aiSettings.customEndpoints.filter(
+          (endpoint) => endpoint.id !== id,
+        );
+        if (aiSettings.selectedEndpointId === id) {
+          aiSettings.selectedProvider = "openai";
+          aiSettings.selectedModel = "gpt-4.1-mini";
+          aiSettings.selectedEndpointId = "";
+        }
+        await persistAiSettings();
+        renderModelSettings();
+      }
+
+      async function saveCustomEndpointKey(id) {
+        const input = document.getElementById(`key-${id}`);
+        const key = input?.value.trim() || "";
+        if (!key) {
+          showToast(t("enter_api_key"), "error");
+          return;
+        }
+        aiSettings.providerKeys[`custom:${id}`] = key;
+        ensureEditingProviderKeys().delete(`custom:${id}`);
+        await persistAiSettings();
+        renderModelSettings();
+      }
+
+      async function clearCustomEndpointKey(id) {
+        delete aiSettings.providerKeys[`custom:${id}`];
+        ensureEditingProviderKeys().delete(`custom:${id}`);
+        await persistAiSettings();
+        renderModelSettings();
+      }
+
+      async function testCustomEndpoint(button, id) {
+        const endpoint = aiSettings.customEndpoints.find((item) => item.id === id);
+        const status = button.parentElement?.parentElement?.querySelector(".provider-test-status");
+        if (!endpoint || !status || !endpoint.baseUrl.trim()) return;
+        status.textContent = t("testing");
+        try {
+          const code = await invoke("lm_ping", { baseUrl: endpoint.baseUrl.trim() });
+          status.textContent = Number(code) >= 200 && Number(code) < 500 ? t("reachable") : t("could_not_reach");
+          status.className = `provider-test-status mt-1 block text-[10px] ${Number(code) >= 200 && Number(code) < 500 ? "text-green-500" : "text-red-400"}`;
+        } catch (_) {
+          status.textContent = t("could_not_reach");
+          status.className = "provider-test-status mt-1 block text-[10px] text-red-400";
+        }
+      }
+
+      function getSelectedAiRequest() {
+        const selected = selectedModelOption();
+        if (!selected) return null;
+        if (selected.provider === "custom-endpoint") {
+          const endpoint = aiSettings.customEndpoints.find(
+            (item) => item.id === selected.endpointId,
+          );
+          if (!endpoint) return null;
+          return {
+            provider: "openai-compatible",
+            model: endpoint.modelId.trim(),
+            api_key: aiSettings.providerKeys[`custom:${endpoint.id}`] || "",
+            base_url: endpoint.baseUrl.trim(),
+          };
+        }
+        const provider = providerById(selected.provider);
+        const config = getProviderConfig(selected.provider);
+        return {
+          provider: selected.provider,
+          model: selected.modelId,
+          api_key: aiSettings.providerKeys[selected.provider] || "",
+          base_url: provider?.type === "local" ? config.baseUrl.trim() : null,
+        };
+      }
+
+      async function getDecryptedKey() {
+        await loadAiSettings();
+        return aiSettings.providerKeys.openai || null;
+      }
+
+      function getSelectedImageRequest() {
+        const options = configuredImageModelOptions();
+        const selected = options.find(
+          (option) =>
+            option.provider === aiSettings.imageProvider &&
+            option.endpointId === (aiSettings.imageEndpointId || "") &&
+            option.modelId === aiSettings.imageModel,
+        ) || options[0];
+        if (!selected) return null;
+
+        if (selected.provider === "custom-endpoint") {
+          const endpoint = aiSettings.customEndpoints.find(
+            (item) => item.id === selected.endpointId,
+          );
+          if (!endpoint) return null;
+          return {
+            provider: "openai-compatible",
+            model: endpoint.imageModelId.trim(),
+            api_key: aiSettings.providerKeys[`custom:${endpoint.id}`] || "",
+            base_url: endpoint.baseUrl.trim(),
+          };
+        }
+
+        return {
+          provider: selected.provider,
+          model: selected.modelId,
+          api_key: aiSettings.providerKeys[selected.provider] || "",
+          base_url: null,
+        };
+      }
+
+      function extractErrorMessage(error, fallback = "Request failed") {
+        if (!error) return fallback;
+        if (typeof error === "string") {
+          try {
+            const parsed = JSON.parse(error);
+            if (
+              parsed &&
+              typeof parsed === "object" &&
+              typeof parsed.message === "string"
+            ) {
+              return parsed.message;
+            }
+          } catch (_) {
+            // Ignore JSON parse errors and use the raw string
+          }
+          return error;
+        }
+        if (typeof error === "object") {
+          if (typeof error.message === "string") return error.message;
+          if (error.error && typeof error.error.message === "string")
+            return error.error.message;
+        }
+        return fallback;
+      }
+
+      async function handleAI(customPrompt) {
+        await loadAiSettings();
+        const selectedRequest = getSelectedAiRequest();
+        if (!selectedRequest) {
+          showToast(t("connect_provider_first"), "error");
+          showView("settings");
+          return;
+        }
+        if (providerNeedsKey(selectedRequest.provider) && !selectedRequest.api_key) {
+          showToast(t("connect_provider_first"), "error");
+          showView("settings");
+          return;
+        }
+
+        if (!capturedText) {
+          const shortcut =
+            localStorage.getItem("app_shortcut") || "Ctrl+Shift+U";
+          showToast(
+            t("select_text_first").replace("{shortcut}", shortcut),
+            "error",
+          );
+          return;
+        }
+
+        const prompt =
+          customPrompt || document.getElementById("prompt-input").value;
+        if (!prompt) return;
+
+        currentAction = prompt.toLowerCase().includes("summarize")
+          ? "summarize"
+          : "standard";
+        showView("loading");
+        const version = selectionVersion;
+
+        try {
+          const requestData = {
+            text: capturedText,
+            prompt,
+            api_key: selectedRequest.api_key,
+            provider: selectedRequest.provider,
+            model: selectedRequest.model,
+            base_url: selectedRequest.base_url,
+          };
+
+          const result = await invoke("process_text", {
+            request: requestData,
+          });
+          aiResult = result;
+          if (version !== selectionVersion) { aiResult = ""; return; }
+          document.getElementById("accept-btn").disabled = manualSelection;
+          document.getElementById("accept-btn").style.opacity = manualSelection ? "0.4" : "1";
+          document.getElementById("accept-btn").title = manualSelection ? "Use Copy result, then paste into your source app" : "Replace selected text";
+          document.getElementById("result-text").innerText = result;
+
+          document
+            .getElementById("standard-result-actions")
+            .classList.toggle("hidden", currentAction === "summarize");
+          document
+            .getElementById("summarize-result-actions")
+            .classList.toggle("hidden", currentAction !== "summarize");
+
+          showView("result");
+        } catch (error) {
+          showToast(
+            "AI Error: " + extractErrorMessage(error, "Request failed"),
+            "error",
+            5000,
+          );
+          showView("menu");
+        }
+      }
+
+      async function copySummary() {
+        try {
+          // Using the Tauri clipboard bridge is more reliable in WebView
+          await invoke("write_to_clipboard", { text: aiResult });
+          showToast(t("summary_copied"), "success");
+          addClipboardHistoryItem(aiResult);
+          await sendClipboardCommand("refresh");
+          capturedText = "";
+          aiResult = "";
+          document.getElementById("captured-indicator").classList.add("hidden");
+          showView("menu");
+          // Hide window after copy
+          await getCurrentWindow().hide();
+        } catch (err) {
+          console.error("Failed to copy to clipboard:", err);
+          showToast(
+            "Failed to copy: " + extractErrorMessage(err, "Request failed"),
+            "error",
+          );
+        }
+      }
+
+      async function acceptResult() {
+        if (manualSelection || !aiResult) return;
+        try {
+          await invoke("paste_text", { text: aiResult });
+          capturedText = "";
+          aiResult = "";
+          document.getElementById("captured-indicator").classList.add("hidden");
+          showView("menu");
+          showToast(t("applied_success"), "success", 2000);
+        } catch (error) {
+          showToast(
+            "Paste Error: " + extractErrorMessage(error, "Request failed"),
+            "error",
+          );
+        }
+      }
+
+      function rejectResult() {
+        aiResult = "";
+        showView("menu");
+        showToast(t("changes_discarded"), "info", 1500);
+      }
+
+      document
+        .getElementById("prompt-input")
+        .addEventListener("keypress", (e) => {
+          if (e.key === "Enter") handleAI();
+        });
+
+      // ── NOTEPAD STORAGE (shared with notepad.html) ──────────────────
+      const NP_STORAGE_KEY = "ghost_writer_notepad_notes";
+      const LEGACY_NP_STORAGE_KEY = "luminus_notepad_notes";
+    </script>
+
+  </body>
+</html>
