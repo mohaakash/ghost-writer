@@ -411,7 +411,7 @@ Home shell exit gate:
 
 ### Phase 7 — Migrate Home settings and AI flows
 
-**Status: Models settings slice implemented behind opt-in flags; General,
+**Status: Models and General settings slices implemented behind opt-in flags;
 Clipboard, AI, and image flows remain legacy-owned pending their slices.**
 
 **Goal:** move the highest-risk stateful surface only after its shell is stable.
@@ -421,7 +421,7 @@ Port settings one tab at a time:
 1. **Models:** provider catalog, cloud/local/custom endpoint forms, encrypted
    key storage, model selectors, image model selectors, provider testing,
    add/edit/remove flows, masking, validation, and error messages.
-2. **General:** capture shortcut recorder, Clipboard shortcut recorder, theme,
+2. **General:** capture shortcut recorder, theme,
    language, acrylic toggle, blur slider, and transparency slider.
 3. **Clipboard:** automatic capture, history limit, open-only behavior, capture
    now, clear history, and Clipboard window opening.

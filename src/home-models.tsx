@@ -19,6 +19,7 @@ interface ModelsSettingsProps {
   onClose: () => void;
   fallbackToLegacy: (view?: string) => void;
   showToast: (message: string, type?: ToastType) => void;
+  onSelectTab?: (tab: PreferencesTab) => void;
 }
 
 interface ProviderCatalogEntry {
@@ -136,7 +137,7 @@ function optionsForSelect(options: ModelOption[]) {
   ));
 }
 
-export function ModelsSettings({ onClose, fallbackToLegacy, showToast }: ModelsSettingsProps) {
+export function ModelsSettings({ onClose, fallbackToLegacy, showToast, onSelectTab }: ModelsSettingsProps) {
   const [settings, setSettings] = useState<AiSettings | null>(null);
   const [editingKeys, setEditingKeys] = useState<Set<string>>(new Set());
   const [keyValues, setKeyValues] = useState<Record<string, string>>({});
@@ -236,7 +237,7 @@ export function ModelsSettings({ onClose, fallbackToLegacy, showToast }: ModelsS
     }
   }
 
-  if (!settings) return <SettingsFrame onClose={onClose} fallbackToLegacy={fallbackToLegacy}><div className="py-8 text-center text-xs text-zinc-500">Loading models…</div></SettingsFrame>;
+  if (!settings) return <SettingsFrame onClose={onClose} fallbackToLegacy={fallbackToLegacy} activeTab="models" onSelectTab={onSelectTab}><div className="py-8 text-center text-xs text-zinc-500">Loading models…</div></SettingsFrame>;
 
   const options = modelOptions(settings);
   const images = imageOptions(settings);
@@ -247,7 +248,7 @@ export function ModelsSettings({ onClose, fallbackToLegacy, showToast }: ModelsS
   const addableProviders = PROVIDERS.filter((provider) => !visibleIds.has(provider.id));
 
   return (
-    <SettingsFrame onClose={onClose} fallbackToLegacy={fallbackToLegacy}>
+    <SettingsFrame onClose={onClose} fallbackToLegacy={fallbackToLegacy} activeTab="models" onSelectTab={onSelectTab}>
       <div className="space-y-2">
         <div className="flex items-center justify-between px-1"><div><p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Models</p><p className="mt-0.5 text-[10px] text-zinc-500 dark:text-zinc-500/90">Connect the providers you use and choose the model for editing.</p></div></div>
         <div className="rounded-2xl border border-black/5 bg-black/5 p-3 dark:border-white/5 dark:bg-white/5">
@@ -274,8 +275,20 @@ export function ModelsSettings({ onClose, fallbackToLegacy, showToast }: ModelsS
   );
 }
 
-function SettingsFrame({ children, onClose, fallbackToLegacy }: { children: React.ReactNode; onClose: () => void; fallbackToLegacy: (view?: string) => void }) {
-  return <div id="settings-view" className="fixed inset-0 z-50 bg-black/30 p-2 backdrop-blur-[2px] dark:bg-black/60"><div className="flex h-full w-full flex-col overflow-hidden rounded-[22px] bg-white/90 shadow-2xl dark:bg-zinc-950/95"><header data-tauri-drag-region className="shrink-0 border-b border-black/5 dark:border-white/10"><div className="flex h-11 items-center justify-between gap-2 px-3"><div className="flex min-w-0 items-center gap-2">{icon("tune", "text-[18px] text-primary")}<h2 className="truncate text-sm font-bold uppercase tracking-widest text-zinc-800 dark:text-zinc-200">Preferences</h2></div><button type="button" onClick={onClose} aria-label="Close preferences" title="Close preferences" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-zinc-500 transition-all hover:bg-black/5 hover:text-zinc-800 dark:hover:bg-white/10 dark:hover:text-zinc-200">{icon("close", "text-[18px]")}</button></div><div className="px-2 pb-2"><div role="tablist" aria-label="Preference sections" className="flex rounded-xl bg-black/5 p-1 dark:bg-white/5"><button type="button" id="settings-tab-models" role="tab" aria-selected="true" className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white/80 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-primary shadow-sm transition-all dark:bg-zinc-800 dark:text-primary">{icon("smart_toy", "text-[15px]")}<span>Models</span></button><button type="button" id="settings-tab-general" role="tab" aria-selected="false" onClick={() => { fallbackToLegacy("settings"); window.setTimeout(() => (window as Window & { selectSettingsTab?: (tab: string) => void }).selectSettingsTab?.("general"), 0); }} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-zinc-500 transition-all hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200">{icon("settings", "text-[15px]")}<span>General</span></button><button type="button" id="settings-tab-clipboard" role="tab" aria-selected="false" onClick={() => { fallbackToLegacy("settings"); window.setTimeout(() => (window as Window & { selectSettingsTab?: (tab: string) => void }).selectSettingsTab?.("clipboard"), 0); }} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-zinc-500 transition-all hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200">{icon("content_paste", "text-[15px]")}<span>Clipboard</span></button></div></div></header><div className="flex-1 overflow-y-auto px-3 pb-5">{children}</div></div></div>;
+export type PreferencesTab = "models" | "general" | "clipboard";
+
+export function SettingsFrame({ children, onClose, fallbackToLegacy, activeTab = "models", onSelectTab }: { children: React.ReactNode; onClose: () => void; fallbackToLegacy: (view?: string) => void; activeTab?: PreferencesTab; onSelectTab?: (tab: PreferencesTab) => void }) {
+  const tab = (next: PreferencesTab) => {
+    if (onSelectTab) onSelectTab(next);
+    else {
+      fallbackToLegacy("settings");
+      window.setTimeout(() => (window as Window & { selectSettingsTab?: (value: string) => void }).selectSettingsTab?.(next), 0);
+    }
+  };
+  const tabClass = (value: PreferencesTab) => value === activeTab
+    ? "flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white/80 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-primary shadow-sm transition-all dark:bg-zinc-800 dark:text-primary"
+    : "flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-zinc-500 transition-all hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200";
+  return <div id="settings-view" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }} className="fixed inset-0 z-50 bg-black/30 p-2 backdrop-blur-[2px] dark:bg-black/60"><div className="flex h-full w-full flex-col overflow-hidden rounded-[22px] bg-white/90 shadow-2xl dark:bg-zinc-950/95"><header data-tauri-drag-region className="shrink-0 border-b border-black/5 dark:border-white/10"><div className="flex h-11 items-center justify-between gap-2 px-3"><div className="flex min-w-0 items-center gap-2">{icon("tune", "text-[18px] text-primary")}<h2 className="truncate text-sm font-bold uppercase tracking-widest text-zinc-800 dark:text-zinc-200">Preferences</h2></div><button type="button" onClick={onClose} aria-label="Close preferences" title="Close preferences" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-zinc-500 transition-all hover:bg-black/5 hover:text-zinc-800 dark:hover:bg-white/10 dark:hover:text-zinc-200">{icon("close", "text-[18px]")}</button></div><div className="px-2 pb-2"><div role="tablist" aria-label="Preference sections" className="flex rounded-xl bg-black/5 p-1 dark:bg-white/5"><button type="button" id="settings-tab-models" data-settings-tab="models" role="tab" aria-selected={activeTab === "models"} onClick={() => tab("models")} className={tabClass("models")}>{icon("smart_toy", "text-[15px]")}<span data-i18n="models">Models</span></button><button type="button" id="settings-tab-general" data-settings-tab="general" role="tab" aria-selected={activeTab === "general"} onClick={() => tab("general")} className={tabClass("general")}>{icon("settings", "text-[15px]")}<span data-i18n="general">General</span></button><button type="button" id="settings-tab-clipboard" data-settings-tab="clipboard" role="tab" aria-selected={activeTab === "clipboard"} onClick={() => tab("clipboard")} className={tabClass("clipboard")}>{icon("content_paste", "text-[15px]")}<span data-i18n="clipboard">Clipboard</span></button></div></div></header><div className="flex-1 overflow-y-auto px-3 pb-5">{children}</div></div></div>;
 }
 
 function ProviderCard({ provider, settings, editingKeys, keyValue, testing, onKeyValue, onSaveKey, onEditKey, onCancelKey, onClearKey, onRemove, onPatch, onTest }: { provider: ProviderCatalogEntry; settings: AiSettings; editingKeys: Set<string>; keyValue: string; testing?: string; onKeyValue: (value: string) => void; onSaveKey: () => void; onEditKey: () => void; onCancelKey: () => void; onClearKey: () => void; onRemove: () => void; onPatch: (patch: Partial<ProviderConfig>) => void; onTest: (value: string) => void }) {
