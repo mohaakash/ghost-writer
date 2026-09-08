@@ -23,6 +23,7 @@ const clipboard = await loadTypeScript('src/lib/clipboard-domain.ts');
 const contracts = await loadTypeScript('src/lib/contracts.ts');
 const ai = await loadTypeScript('src/lib/ai-domain.ts');
 const presentation = await loadTypeScript('src/lib/presentation-domain.ts');
+const migrationFlags = await loadTypeScript('src/lib/migration-flags.ts');
 
 test('appearance normalization preserves zero values and legacy defaults', () => {
   assert.deepEqual(appearance.normalizeAppearance({ blurAmount: 0, transparency: 0 }), {
@@ -150,4 +151,17 @@ test('typed registries preserve the native command and event names', () => {
     'ghost_writer_notepad_notes', 'ghost_writer_ai_settings_enc',
     'luminus_ai_settings_enc', 'luminus_openai_api_key_enc',
   ]);
+});
+
+test('React migration flags default to the legacy owner and can be toggled explicitly', () => {
+  const values = new Map();
+  const storage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+  };
+  assert.equal(migrationFlags.isReactNotepadEnabled(storage), false);
+  migrationFlags.setReactNotepadEnabled(true, storage);
+  assert.equal(migrationFlags.isReactNotepadEnabled(storage), true);
+  values.set(migrationFlags.REACT_NOTEPAD_FLAG, 'false');
+  assert.equal(migrationFlags.isReactNotepadEnabled(storage), false);
 });

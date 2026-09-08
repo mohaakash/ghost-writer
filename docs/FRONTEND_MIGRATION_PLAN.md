@@ -248,6 +248,10 @@ Exit gate:
 
 ### Phase 3 — Shared visual primitives and React shell
 
+**Status: foundation complete; page ownership remains with the legacy DOM.**
+The shared primitives and isolated hidden shell are ready for the Notepad
+parity slice in Phase 4.
+
 **Goal:** establish React ownership of non-product-specific structure while
 keeping the pixels unchanged.
 
@@ -276,6 +280,9 @@ Exit gate:
 - No page workflow has been moved yet unless its reference test passes.
 
 ### Phase 4 — Migrate Notepad first
+
+**Status: React slice implemented behind the fallback flag; visual cutover
+gate pending.**
 
 **Goal:** convert the smallest self-contained window and validate the process.
 

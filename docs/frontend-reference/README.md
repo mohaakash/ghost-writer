@@ -17,6 +17,10 @@ parity gates in [`../FRONTEND_MIGRATION_PLAN.md`](../FRONTEND_MIGRATION_PLAN.md)
   required for one-to-one visual comparison.
 - [`../PHASE_2_STATUS.md`](../PHASE_2_STATUS.md) — typed contract and pure
   service extraction status before any visible React cutover.
+- [`../PHASE_3_STATUS.md`](../PHASE_3_STATUS.md) — shared primitive and hidden
+  React shell status before page ownership changes.
+- [`../PHASE_4_STATUS.md`](../PHASE_4_STATUS.md) — opt-in Notepad React slice
+  and its remaining parity gate.
 
 The original composite reference image is
 [`screenshots/screenshot.png`](../../screenshots/screenshot.png). The Phase 0
