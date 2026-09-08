@@ -374,6 +374,9 @@ Clipboard exit gate:
 
 ### Phase 6 — Migrate the Home window shell and menu
 
+**Status: Home shell and menu implemented behind the fallback flag; visual
+cutover gate pending.**
+
 **Goal:** move the home window's navigation and action surface before moving
 the more complex settings and AI flows.
 
@@ -590,9 +593,9 @@ states in `docs/frontend-reference/VISUAL_STATES.md` are captured as regression
 cases immediately before the page or component that owns each state is
 migrated.
 
-1. Run the Notepad and Clipboard visual/workflow gates at their documented
-   reference viewports while their fallback flags remain opt-in.
-2. Make Notepad the default owner only after its manual gate passes; keep its
-   flag for rollback during the soak period.
-3. Make Clipboard the default owner only after its manual gate passes, then
-   continue with the Home shell and Home settings/AI in that order.
+1. Run the Notepad, Clipboard, and Home visual/workflow gates at their
+   documented reference viewports while their fallback flags remain opt-in.
+2. Make Notepad and Clipboard the default owners only after their manual gates
+   pass; keep their flags for rollback during the soak period.
+3. Port Home settings and AI/image flows, then make Home the default owner only
+   after those workflows pass.
