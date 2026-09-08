@@ -6,7 +6,7 @@ import { GlassWindow } from "./components/primitives";
 import { ClipboardPage } from "./clipboard";
 import { HomePage } from "./home";
 import { installLegacyServices } from "./lib/legacy-adapter";
-import { isReactClipboardEnabled, isReactHomeEnabled, isReactNotepadEnabled, REACT_HOME_FLAG } from "./lib/migration-flags";
+import { isReactClipboardEnabled, isReactHomeEnabled, isReactHomeModelsEnabled, isReactNotepadEnabled, REACT_HOME_FLAG } from "./lib/migration-flags";
 import { NotepadPage } from "./notepad";
 
 installLegacyServices();
@@ -43,7 +43,7 @@ if (isHomePage && isReactHomeEnabled()) {
     try { localStorage.removeItem(REACT_HOME_FLAG); } catch { /* keep the fallback available if storage is unavailable */ }
     window.setTimeout(() => (window as Window & { showView?: (nextView: string) => void }).showView?.(view), 0);
   };
-  root.render(<StrictMode><HomePage fallbackToLegacy={fallbackToLegacy} /></StrictMode>);
+  root.render(<StrictMode><HomePage fallbackToLegacy={fallbackToLegacy} modelsEnabled={isReactHomeModelsEnabled()} /></StrictMode>);
 } else if (isNotepadPage && isReactNotepadEnabled()) {
   document.querySelector(".notepad-shell")?.setAttribute("hidden", "true");
   document.getElementById("toast")?.setAttribute("hidden", "true");

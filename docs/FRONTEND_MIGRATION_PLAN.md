@@ -411,6 +411,9 @@ Home shell exit gate:
 
 ### Phase 7 — Migrate Home settings and AI flows
 
+**Status: Models settings slice implemented behind opt-in flags; General,
+Clipboard, AI, and image flows remain legacy-owned pending their slices.**
+
 **Goal:** move the highest-risk stateful surface only after its shell is stable.
 
 Port settings one tab at a time:

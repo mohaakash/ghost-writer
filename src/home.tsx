@@ -3,16 +3,19 @@ import { applyAppearance, loadAppearance } from "./lib/appearance";
 import { onAppearanceChanged, onClipboardCaptured, onSelectionCaptured } from "./lib/tauri-events";
 import { openClipboardWindow, openNotepadWindow, startClipboardMonitor } from "./lib/tauri-commands";
 import { startDragging } from "./lib/tauri";
+import { ModelsSettings } from "./home-models";
 
 type LegacyHomeWindow = Window & {
   useCopiedText?: () => void;
   handleAI?: (prompt?: string) => void;
   handleGenerateImage?: (mode?: string) => void;
   showView?: (view: string) => void;
+  selectSettingsTab?: (tab: string) => void;
 };
 
 interface HomePageProps {
   fallbackToLegacy: (view?: string) => void;
+  modelsEnabled?: boolean;
 }
 
 const QUICK_ACTIONS = [
@@ -31,10 +34,11 @@ function legacyText(key: string, fallback: string) {
 }
 
 /** Home menu shell staged against the existing index.html reference. */
-export function HomePage({ fallbackToLegacy }: HomePageProps) {
+export function HomePage({ fallbackToLegacy, modelsEnabled = false }: HomePageProps) {
   const [capturedText, setCapturedText] = useState("");
   const [prompt, setPrompt] = useState("");
   const [toast, setToast] = useState<{ message: string; type: "info" | "success" | "error" } | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     applyAppearance(loadAppearance());
@@ -154,7 +158,7 @@ export function HomePage({ fallbackToLegacy }: HomePageProps) {
           </div>
         </div>
 
-        <button id="settings-toggle" type="button" onClick={() => fallbackToLegacy("settings")} aria-label="Preferences" title="Preferences" className="absolute bottom-3 right-3 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-white/60 text-primary shadow-lg shadow-black/10 backdrop-blur-md transition-all hover:scale-105 hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-white/10 dark:bg-zinc-800/80 dark:hover:bg-primary/15">
+        <button id="settings-toggle" type="button" onClick={() => modelsEnabled ? setSettingsOpen(true) : fallbackToLegacy("settings")} aria-label="Preferences" title="Preferences" className="absolute bottom-3 right-3 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-white/60 text-primary shadow-lg shadow-black/10 backdrop-blur-md transition-all hover:scale-105 hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-white/10 dark:bg-zinc-800/80 dark:hover:bg-primary/15">
           <MaterialIcon name="settings" className="text-[19px]" />
         </button>
 
@@ -165,6 +169,7 @@ export function HomePage({ fallbackToLegacy }: HomePageProps) {
           </div>
         </div>
       </div>
+      {settingsOpen ? <ModelsSettings onClose={() => setSettingsOpen(false)} fallbackToLegacy={(view) => { fallbackToLegacy(view); }} showToast={showToast} /> : null}
     </>
   );
 }
