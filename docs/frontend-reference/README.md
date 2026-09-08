@@ -21,6 +21,8 @@ parity gates in [`../FRONTEND_MIGRATION_PLAN.md`](../FRONTEND_MIGRATION_PLAN.md)
   React shell status before page ownership changes.
 - [`../PHASE_4_STATUS.md`](../PHASE_4_STATUS.md) — opt-in Notepad React slice
   and its remaining parity gate.
+- [`../PHASE_5_STATUS.md`](../PHASE_5_STATUS.md) — opt-in Clipboard React slice
+  and its remaining parity gate.
 
 The original composite reference image is
 [`screenshots/screenshot.png`](../../screenshots/screenshot.png). The Phase 0

@@ -326,6 +326,9 @@ Notepad exit gate:
 
 ### Phase 5 — Migrate Clipboard second
 
+**Status: React slice implemented behind the fallback flag; visual cutover
+gate pending.**
+
 **Goal:** convert the standalone history window while preserving its local
 history semantics and cross-window commands.
 
@@ -587,8 +590,9 @@ states in `docs/frontend-reference/VISUAL_STATES.md` are captured as regression
 cases immediately before the page or component that owns each state is
 migrated.
 
-1. Choose Notepad as the first visible React slice and add its fallback switch.
-2. Port only the Notepad shell/header, run visual comparison, and stop if any
-   spacing, icon, focus, or drag behavior differs.
-3. Continue through Notepad, Clipboard, Home shell, and Home settings/AI in
-   that order, using the exit gate after each slice.
+1. Run the Notepad and Clipboard visual/workflow gates at their documented
+   reference viewports while their fallback flags remain opt-in.
+2. Make Notepad the default owner only after its manual gate passes; keep its
+   flag for rollback during the soak period.
+3. Make Clipboard the default owner only after its manual gate passes, then
+   continue with the Home shell and Home settings/AI in that order.

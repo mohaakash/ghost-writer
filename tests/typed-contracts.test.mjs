@@ -160,6 +160,7 @@ test('React migration flags default to the legacy owner and can be toggled expli
     setItem: (key, value) => values.set(key, value),
   };
   assert.equal(migrationFlags.isReactNotepadEnabled(storage), false);
+  assert.equal(migrationFlags.isReactClipboardEnabled(storage), false);
   migrationFlags.setReactNotepadEnabled(true, storage);
   assert.equal(migrationFlags.isReactNotepadEnabled(storage), true);
   values.set(migrationFlags.REACT_NOTEPAD_FLAG, 'false');
