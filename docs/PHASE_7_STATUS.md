@@ -1,9 +1,9 @@
-# Phase 7 Status — Home Settings Slices
+# Phase 7 Status — Home Settings and AI/Image Flows
 
-The Home Preferences Models, General, and Clipboard tabs are implemented behind the
-opt-in storage flags `ghost_writer_react_home_v1`,
-`ghost_writer_react_home_models_v1`, `ghost_writer_react_home_general_v1`, and
-`ghost_writer_react_home_clipboard_v1`.
+The Home Preferences Models, General, and Clipboard tabs plus the AI/image flows
+are implemented behind the opt-in storage flags `ghost_writer_react_home_v1`,
+`ghost_writer_react_home_models_v1`, `ghost_writer_react_home_general_v1`,
+`ghost_writer_react_home_clipboard_v1`, and `ghost_writer_react_home_ai_v1`.
 
 This slice preserves the legacy provider catalog, model and image-model
 selectors, encrypted settings storage, legacy encrypted-settings migration,
@@ -22,24 +22,30 @@ retention when trimming, open-only Clipboard, the Clipboard shortcut recorder,
 capture-now, clear-history, item counts, local storage, native clipboard
 commands, and the existing settings classes and Material icon treatment.
 
-To preview all three settings slices in the Home window, enable the flags and reload:
+The AI and image slice preserves selected-text resolution, copied-text mode,
+typed process-text and generate-image requests, provider validation, loading and
+failure states, stale-response protection, result accept/reject/copy actions,
+summary handling, image copy/download, and save-to-Notepad behavior.
+
+To preview all Phase 7 Home slices in the Home window, enable the flags and reload:
 
 ```js
 localStorage.setItem("ghost_writer_react_home_v1", "true");
 localStorage.setItem("ghost_writer_react_home_models_v1", "true");
 localStorage.setItem("ghost_writer_react_home_general_v1", "true");
 localStorage.setItem("ghost_writer_react_home_clipboard_v1", "true");
+localStorage.setItem("ghost_writer_react_home_ai_v1", "true");
 location.reload();
 ```
 
-AI and image result flows still return to the legacy Home owner. Remove the
-flags to restore the legacy implementation:
+Remove the flags to restore the legacy Home implementation:
 
 ```js
 localStorage.removeItem("ghost_writer_react_home_v1");
 localStorage.removeItem("ghost_writer_react_home_models_v1");
 localStorage.removeItem("ghost_writer_react_home_general_v1");
 localStorage.removeItem("ghost_writer_react_home_clipboard_v1");
+localStorage.removeItem("ghost_writer_react_home_ai_v1");
 location.reload();
 ```
 

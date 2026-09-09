@@ -7,9 +7,9 @@ action labels and prompts, image and diagram actions, Notepad and Clipboard
 window actions, Preferences entry, Material icons, drag filtering, and the
 existing native command boundaries.
 
-Advanced AI/image actions and Preferences hand back to the legacy Home owner
-for now. This keeps the existing settings, provider, result, loading, and
-image workflows available while Phase 7 ports those surfaces.
+Advanced AI/image actions and Preferences remain available through the legacy
+fallback while the Phase 7 React settings and AI/image slices are exercised
+behind their opt-in flags.
 
 The legacy Home page remains the default. To preview the React shell and menu,
 set this flag in the Home window's local storage and reload that window:

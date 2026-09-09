@@ -6,7 +6,7 @@ import { GlassWindow } from "./components/primitives";
 import { ClipboardPage } from "./clipboard";
 import { HomePage } from "./home";
 import { installLegacyServices } from "./lib/legacy-adapter";
-import { isReactClipboardEnabled, isReactHomeClipboardEnabled, isReactHomeEnabled, isReactHomeGeneralEnabled, isReactHomeModelsEnabled, isReactNotepadEnabled, REACT_HOME_FLAG } from "./lib/migration-flags";
+import { isReactClipboardEnabled, isReactHomeAiEnabled, isReactHomeClipboardEnabled, isReactHomeEnabled, isReactHomeGeneralEnabled, isReactHomeModelsEnabled, isReactNotepadEnabled, REACT_HOME_FLAG } from "./lib/migration-flags";
 import { NotepadPage } from "./notepad";
 
 installLegacyServices();
@@ -28,7 +28,9 @@ if (isHomePage && isReactHomeEnabled()) {
   const legacyShell = document.getElementById("floating-menu");
   const legacyToast = document.getElementById("toast");
   legacyShell?.setAttribute("hidden", "true");
+  legacyShell?.setAttribute("aria-hidden", "true");
   legacyToast?.setAttribute("hidden", "true");
+  legacyToast?.setAttribute("aria-hidden", "true");
   const host = document.createElement("div");
   host.id = "react-home-root";
   host.style.position = "fixed";
@@ -40,10 +42,12 @@ if (isHomePage && isReactHomeEnabled()) {
     host.remove();
     legacyShell?.removeAttribute("hidden");
     legacyToast?.removeAttribute("hidden");
+    legacyShell?.removeAttribute("aria-hidden");
+    legacyToast?.removeAttribute("aria-hidden");
     try { localStorage.removeItem(REACT_HOME_FLAG); } catch { /* keep the fallback available if storage is unavailable */ }
     window.setTimeout(() => (window as Window & { showView?: (nextView: string) => void }).showView?.(view), 0);
   };
-  root.render(<StrictMode><HomePage fallbackToLegacy={fallbackToLegacy} modelsEnabled={isReactHomeModelsEnabled()} generalEnabled={isReactHomeGeneralEnabled()} clipboardSettingsEnabled={isReactHomeClipboardEnabled()} /></StrictMode>);
+  root.render(<StrictMode><HomePage fallbackToLegacy={fallbackToLegacy} modelsEnabled={isReactHomeModelsEnabled()} generalEnabled={isReactHomeGeneralEnabled()} clipboardSettingsEnabled={isReactHomeClipboardEnabled()} aiEnabled={isReactHomeAiEnabled()} /></StrictMode>);
 } else if (isNotepadPage && isReactNotepadEnabled()) {
   document.querySelector(".notepad-shell")?.setAttribute("hidden", "true");
   document.getElementById("toast")?.setAttribute("hidden", "true");

@@ -411,8 +411,8 @@ Home shell exit gate:
 
 ### Phase 7 — Migrate Home settings and AI flows
 
-**Status: Models, General, and Clipboard settings slices implemented behind
-opt-in flags; AI and image flows remain legacy-owned pending their slices.**
+**Status: Models, General, Clipboard, AI, and image slices implemented behind
+opt-in flags; Phase 7 is ready for its manual parity exit gate.**
 
 **Goal:** move the highest-risk stateful surface only after its shell is stable.
 
@@ -437,6 +437,10 @@ Then port AI and image behavior:
 - image and diagram prompt construction;
 - generated image display, copy, download, save-to-Notepad, and regenerate;
 - loading and failure states.
+
+**Implementation status:** AI and image behavior is now implemented behind the
+`ghost_writer_react_home_ai_v1` flag. Manual visual and workflow comparison is
+the remaining Phase 7 exit gate.
 
 Home settings/AI exit gate:
 

@@ -163,6 +163,7 @@ test('React migration flags default to the legacy owner and can be toggled expli
   assert.equal(migrationFlags.isReactHomeModelsEnabled(storage), false);
   assert.equal(migrationFlags.isReactHomeGeneralEnabled(storage), false);
   assert.equal(migrationFlags.isReactHomeClipboardEnabled(storage), false);
+  assert.equal(migrationFlags.isReactHomeAiEnabled(storage), false);
   assert.equal(migrationFlags.isReactNotepadEnabled(storage), false);
   assert.equal(migrationFlags.isReactClipboardEnabled(storage), false);
   migrationFlags.setReactNotepadEnabled(true, storage);

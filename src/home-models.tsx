@@ -127,6 +127,38 @@ function imageOptions(settings: AiSettings) {
   return options;
 }
 
+export interface SelectedAiRequest {
+  provider: string;
+  model: string;
+  api_key: string;
+  base_url: string | null;
+}
+
+export function getSelectedAiRequest(settings: AiSettings): SelectedAiRequest | null {
+  const selected = modelOptions(settings).find((option) => option.provider === settings.selectedProvider && option.endpointId === settings.selectedEndpointId && option.modelId === settings.selectedModel) ?? modelOptions(settings)[0];
+  if (!selected) return null;
+  if (selected.provider === "custom-endpoint") {
+    const endpoint = settings.customEndpoints.find((item) => item.id === selected.endpointId);
+    if (!endpoint) return null;
+    return { provider: "openai-compatible", model: endpoint.modelId.trim(), api_key: settings.providerKeys[`custom:${endpoint.id}`] ?? "", base_url: endpoint.baseUrl.trim() };
+  }
+  const provider = providerFor(selected.provider);
+  const config = settings.providerConfig[selected.provider] ?? {};
+  return { provider: selected.provider, model: selected.modelId, api_key: settings.providerKeys[selected.provider] ?? "", base_url: provider?.type === "local" ? config.baseUrl?.trim() ?? "" : null };
+}
+
+export function getSelectedImageRequest(settings: AiSettings): SelectedAiRequest | null {
+  const options = imageOptions(settings);
+  const selected = options.find((option) => option.provider === settings.imageProvider && option.endpointId === settings.imageEndpointId && option.modelId === settings.imageModel) ?? options[0];
+  if (!selected) return null;
+  if (selected.provider === "custom-endpoint") {
+    const endpoint = settings.customEndpoints.find((item) => item.id === selected.endpointId);
+    if (!endpoint) return null;
+    return { provider: "openai-compatible", model: endpoint.imageModelId.trim(), api_key: settings.providerKeys[`custom:${endpoint.id}`] ?? "", base_url: endpoint.baseUrl.trim() };
+  }
+  return { provider: selected.provider, model: selected.modelId, api_key: settings.providerKeys[selected.provider] ?? "", base_url: null };
+}
+
 function optionsForSelect(options: ModelOption[]) {
   const grouped = new Map<string, ModelOption[]>();
   for (const option of options) grouped.set(option.provider, [...(grouped.get(option.provider) ?? []), option]);
@@ -270,7 +302,7 @@ export function ModelsSettings({ onClose, fallbackToLegacy, showToast, onSelectT
         <div className="flex items-center justify-between px-1"><div><p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Providers</p><p className="mt-0.5 text-[10px] text-zinc-500 dark:text-zinc-500/90">Keys stay encrypted on this device and are sent only to the selected provider.</p></div><div className="relative"><button type="button" onClick={() => setProviderMenuOpen((open) => !open)} className="flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-primary transition-all hover:bg-primary/20">{icon("add", "text-[14px]")}Add provider</button>{providerMenuOpen ? <div className="absolute right-0 top-9 z-30 w-56 rounded-xl border border-zinc-200/80 bg-white/95 p-1.5 shadow-xl backdrop-blur-xl dark:border-zinc-700/70 dark:bg-zinc-900/95"><p className="px-2.5 pb-1 pt-2 text-[9px] font-bold uppercase tracking-widest text-zinc-400">Cloud</p>{addableProviders.filter((provider) => provider.type === "cloud").map((provider) => <button type="button" key={provider.id} onClick={() => addProvider(provider.id)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-zinc-700 transition-colors hover:bg-primary/10 dark:text-zinc-200">{icon(provider.icon, "text-[15px] text-zinc-500")}<span>{provider.label}</span></button>)}<p className="px-2.5 pb-1 pt-2 text-[9px] font-bold uppercase tracking-widest text-zinc-400">Local &amp; custom</p>{addableProviders.filter((provider) => provider.type === "local").map((provider) => <button type="button" key={provider.id} onClick={() => addProvider(provider.id)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-zinc-700 transition-colors hover:bg-primary/10 dark:text-zinc-200">{icon(provider.icon, "text-[15px] text-zinc-500")}<span>{provider.label}</span></button>)}<button type="button" onClick={addCustomEndpoint} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] text-zinc-700 transition-colors hover:bg-primary/10 dark:text-zinc-200">{icon("link", "text-[15px] text-primary")}<span>OpenAI Compatible</span></button></div> : null}</div></div>
         {visibleProviders.length || settings.customEndpoints.length ? <div className="space-y-2">{visibleProviders.map((provider) => <ProviderCard key={provider.id} provider={provider} settings={settings} editingKeys={editingKeys} keyValue={keyValues[provider.id] ?? ""} testing={testing[provider.id]} onKeyValue={(value) => setKeyValues((current) => ({ ...current, [provider.id]: value }))} onSaveKey={() => void saveKey(provider.id)} onEditKey={() => setEditingKeys((current) => new Set(current).add(provider.id))} onCancelKey={() => setEditingKeys((current) => { const next = new Set(current); next.delete(provider.id); return next; })} onClearKey={() => void update({ ...settings, providerKeys: Object.fromEntries(Object.entries(settings.providerKeys).filter(([key]) => key !== provider.id)) })} onRemove={() => void removeProvider(provider.id)} onPatch={(patch) => patchProvider(provider.id, patch)} onTest={(value) => void testBaseUrl(provider.id, value)} />)}{settings.customEndpoints.map((endpoint) => <CustomEndpointCard key={endpoint.id} endpoint={endpoint} settings={settings} expanded={expandedEndpoints.has(endpoint.id) || !endpoint.baseUrl.trim()} keyValue={keyValues[`custom:${endpoint.id}`] ?? ""} editing={editingKeys.has(`custom:${endpoint.id}`) || !settings.providerKeys[`custom:${endpoint.id}`]} testing={testing[endpoint.id]} onToggle={() => setExpandedEndpoints((current) => { const next = new Set(current); if (next.has(endpoint.id)) next.delete(endpoint.id); else next.add(endpoint.id); return next; })} onPatch={(patch) => void saveEndpoint(endpoint.id, patch)} onRemove={() => void removeEndpoint(endpoint.id)} onKeyValue={(value) => setKeyValues((current) => ({ ...current, [`custom:${endpoint.id}`]: value }))} onSaveKey={() => void saveKey(`custom:${endpoint.id}`)} onEditKey={() => setEditingKeys((current) => new Set(current).add(`custom:${endpoint.id}`))} onClearKey={() => void update({ ...settings, providerKeys: Object.fromEntries(Object.entries(settings.providerKeys).filter(([key]) => key !== `custom:${endpoint.id}`)) })} onTest={(value) => void testBaseUrl(endpoint.id, value)} />)}</div> : <div className="rounded-2xl border border-dashed border-zinc-300/70 bg-black/5 px-4 py-7 text-center dark:border-zinc-700/70 dark:bg-white/5"><p className="text-xs text-zinc-500">No providers connected yet.</p><p className="mt-1 text-[10px] text-zinc-500/80">Add a cloud provider, local model, or custom endpoint to get started.</p></div>}
       </div>
-      <div className="rounded-2xl border border-primary/10 bg-primary/5 px-3 py-2.5"><p className="flex items-center gap-2 text-[10px] leading-relaxed text-zinc-500 dark:text-zinc-400">{icon("lock", "text-[15px] text-primary")}Keys are stored locally on this device and are sent only to the selected provider.</p></div>
+      <div className="rounded-2xl border border-primary/10 bg-primary/5 px-3 py-2.5"><p data-i18n="models_local_help" className="flex items-center gap-2 text-[10px] leading-relaxed text-zinc-500 dark:text-zinc-400">{icon("lock", "text-[15px] text-primary")}Provider keys and endpoint settings are stored locally. Ghost Writer does not proxy them through an application backend.</p></div>
     </SettingsFrame>
   );
 }
@@ -316,18 +348,42 @@ function TextField({ label, value, placeholder, onBlur, mono = false }: { label:
   return <label className="block"><span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-zinc-500">{label}</span><input defaultValue={value} onBlur={(event) => onBlur(event.currentTarget.value.trim())} placeholder={placeholder} spellCheck={false} className={`w-full rounded-xl border border-transparent bg-white/60 px-3 py-2 text-[11px] text-zinc-800 outline-none transition-all placeholder:text-zinc-400 focus:border-primary/30 dark:bg-zinc-900/50 dark:text-zinc-200${mono ? " font-mono" : ""}`} /></label>;
 }
 
-async function loadStoredSettings() {
+export async function loadStoredSettings() {
   const read = async (key: string) => {
     const value = localStorage.getItem(key);
     if (!value) return null;
     try { return await decryptData({ encryptedData: value }); } catch { return null; }
   };
-  const stored = await read(AI_SETTINGS_KEY) ?? await read(LEGACY_AI_SETTINGS_KEY);
-  if (stored) {
-    try { return normalizeAiSettings(JSON.parse(stored)); } catch { /* fall through to defaults */ }
+  const persistMigration = async (next: AiSettings, legacyKey?: string) => {
+    try {
+      const encrypted = await encryptData({ data: JSON.stringify(next) });
+      if (!encrypted) return;
+      localStorage.setItem(AI_SETTINGS_KEY, encrypted);
+      if (legacyKey) localStorage.removeItem(legacyKey);
+    } catch {
+      // Keep the legacy value available if this run cannot write encrypted storage.
+    }
+  };
+
+  const currentStored = await read(AI_SETTINGS_KEY);
+  if (currentStored) {
+    try { return normalizeAiSettings(JSON.parse(currentStored)); } catch { /* fall through to defaults */ }
   }
+
+  const legacyStored = await read(LEGACY_AI_SETTINGS_KEY);
+  if (legacyStored) {
+    try {
+      const next = normalizeAiSettings(JSON.parse(legacyStored));
+      await persistMigration(next, LEGACY_AI_SETTINGS_KEY);
+      return next;
+    } catch { /* fall through to defaults */ }
+  }
+
   const next = cloneDefaults();
   const legacyKey = await read(LEGACY_OPENAI_KEY);
-  if (legacyKey) next.providerKeys.openai = legacyKey;
+  if (legacyKey) {
+    next.providerKeys.openai = legacyKey;
+    await persistMigration(next, LEGACY_OPENAI_KEY);
+  }
   return next;
 }
