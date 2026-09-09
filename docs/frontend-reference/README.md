@@ -25,7 +25,7 @@ parity gates in [`../FRONTEND_MIGRATION_PLAN.md`](../FRONTEND_MIGRATION_PLAN.md)
   and its remaining parity gate.
 - [`../PHASE_6_STATUS.md`](../PHASE_6_STATUS.md) — opt-in Home shell/menu React
   slice and its remaining parity gate.
-- [`../PHASE_7_STATUS.md`](../PHASE_7_STATUS.md) — opt-in Home Models and General settings slices
+- [`../PHASE_7_STATUS.md`](../PHASE_7_STATUS.md) — opt-in Home settings slices
   React slice and its remaining parity gate.
 
 The original composite reference image is

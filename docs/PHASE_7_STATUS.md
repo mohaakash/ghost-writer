@@ -1,8 +1,9 @@
 # Phase 7 Status — Home Settings Slices
 
-The Home Preferences Models and General tabs are implemented behind the
+The Home Preferences Models, General, and Clipboard tabs are implemented behind the
 opt-in storage flags `ghost_writer_react_home_v1`,
-`ghost_writer_react_home_models_v1`, and `ghost_writer_react_home_general_v1`.
+`ghost_writer_react_home_models_v1`, `ghost_writer_react_home_general_v1`, and
+`ghost_writer_react_home_clipboard_v1`.
 
 This slice preserves the legacy provider catalog, model and image-model
 selectors, encrypted settings storage, legacy encrypted-settings migration,
@@ -16,22 +17,29 @@ transparency controls, appearance storage, appearance events, and the existing
 settings classes and Material icon treatment. Language changes hand off to the
 legacy owner so the complete translation catalogue updates atomically.
 
-To preview both slices in the Home window, enable the flags and reload:
+The Clipboard slice preserves automatic capture, the history limit, pinned-item
+retention when trimming, open-only Clipboard, the Clipboard shortcut recorder,
+capture-now, clear-history, item counts, local storage, native clipboard
+commands, and the existing settings classes and Material icon treatment.
+
+To preview all three settings slices in the Home window, enable the flags and reload:
 
 ```js
 localStorage.setItem("ghost_writer_react_home_v1", "true");
 localStorage.setItem("ghost_writer_react_home_models_v1", "true");
 localStorage.setItem("ghost_writer_react_home_general_v1", "true");
+localStorage.setItem("ghost_writer_react_home_clipboard_v1", "true");
 location.reload();
 ```
 
-The Clipboard tab, plus AI and image result flows, still return to the legacy
-Home owner. Remove the flags to restore the legacy implementation:
+AI and image result flows still return to the legacy Home owner. Remove the
+flags to restore the legacy implementation:
 
 ```js
 localStorage.removeItem("ghost_writer_react_home_v1");
 localStorage.removeItem("ghost_writer_react_home_models_v1");
 localStorage.removeItem("ghost_writer_react_home_general_v1");
+localStorage.removeItem("ghost_writer_react_home_clipboard_v1");
 location.reload();
 ```
 
